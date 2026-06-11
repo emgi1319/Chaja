@@ -1,0 +1,78 @@
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: theme("colors.ink.DEFAULT");
+  font-family: theme("fontFamily.sans");
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+* {
+  min-width: 0;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer components {
+  .screen {
+    @apply mx-auto flex w-full max-w-[480px] flex-col overflow-hidden bg-white;
+    height: 100%;
+    padding-top: max(env(safe-area-inset-top), 14px);
+  }
+  .screen > * {
+    min-height: 0;
+  }
+  .field {
+    @apply w-full rounded-2xl bg-surface px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-muted outline-none;
+  }
+  .label {
+    @apply font-display text-[14px] font-semibold text-ink;
+  }
+  .footer-actions {
+    @apply px-5 pt-2;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+  }
+  .press {
+    @apply transition-transform duration-100 active:scale-[0.97];
+  }
+  .card {
+    @apply rounded-2xl bg-white p-4 shadow-card;
+  }
+}
