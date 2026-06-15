@@ -7,8 +7,10 @@ import { LocalCollection, newId } from "./db";
 const API_BASE = "";
 const API_KEY = "";
 
-const CATALOG_KEY = "fah.catalogo";
-const USER_KEY = "fah.user";
+export const LOCAL_MODE = !API_BASE;
+
+const CATALOG_KEY = "chaja.catalogo";
+const USER_KEY = "chaja.user";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE) throw new Error("offline");
@@ -66,6 +68,11 @@ export class SyncedCollection<T extends Entity> {
     }
   }
 
+  // Inserta datos de ejemplo como ya sincronizados (no quedan pendientes).
+  seedLocal(items: T[]): void {
+    for (const it of items) this.local.upsert({ ...it, synced: true });
+  }
+
   pendingCount(): number {
     return this.local.pending().length;
   }
@@ -86,9 +93,9 @@ export class SyncedCollection<T extends Entity> {
   }
 }
 
-export const productores = new SyncedCollection<Productor>("fah.productores", "/productores");
-export const notasCampo = new SyncedCollection<NotaCampo>("fah.notas_campo", "/notas-campo");
-export const referidos = new SyncedCollection<Referido>("fah.referidos", "/referidos");
+export const productores = new SyncedCollection<Productor>("chaja.productores", "/productores");
+export const notasCampo = new SyncedCollection<NotaCampo>("chaja.notas_campo", "/notas-campo");
+export const referidos = new SyncedCollection<Referido>("chaja.referidos", "/referidos");
 
 export async function syncPending(): Promise<number> {
   const counts = await Promise.all([

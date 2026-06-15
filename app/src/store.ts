@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Producto, User } from "./types";
 import { clearUser, loadCatalog, readUser, storeUser } from "./lib/api";
+import { seedDemo } from "./lib/seed";
 
 type AppState = {
   user: User | null;
@@ -25,6 +26,7 @@ export const useApp = create<AppState>((set) => ({
   },
 
   initData: async () => {
+    seedDemo();
     const catalogo = await loadCatalog();
     set({ catalogo });
   },
