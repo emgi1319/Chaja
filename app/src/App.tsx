@@ -6,6 +6,7 @@ import type { PluginListenerHandle } from "@capacitor/core";
 import { useApp } from "./store";
 import { syncPending } from "./lib/api";
 import { Login } from "./screens/Login";
+import { Dashboard } from "./screens/Dashboard";
 import { Home } from "./screens/Home";
 import { Productores } from "./screens/Productores";
 import { ProductorNuevo } from "./screens/ProductorNuevo";
@@ -46,6 +47,7 @@ export default function App() {
   }, [initData]);
 
   if (!user) return <Login />;
+  if (user.rol === "gerente") return <Dashboard />;
 
   return (
     <Routes>

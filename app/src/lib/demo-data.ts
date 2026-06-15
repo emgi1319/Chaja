@@ -1,4 +1,4 @@
-import type { Producto, Productor } from "../types";
+import type { NotaCampo, Producto, Productor } from "../types";
 
 // Datos de ejemplo para la demostración local. Se reemplazan por el catálogo y
 // la cartera reales del cliente una vez confirmado el Hito 1.
@@ -260,4 +260,44 @@ export function demoProductores(): Productor[] {
       updatedAt: now,
     },
   ];
+}
+
+export interface VendedorMetrica {
+  nombre: string;
+  objetivo: number;
+  logrado: number;
+  referidos: number;
+}
+
+export const DEMO_VENDEDORES: VendedorMetrica[] = [
+  { nombre: "Diego Romero", objetivo: 120000, logrado: 86000, referidos: 7 },
+  { nombre: "Lucía Méndez", objetivo: 100000, logrado: 94000, referidos: 11 },
+  { nombre: "Pablo Sosa", objetivo: 90000, logrado: 52000, referidos: 4 },
+];
+
+export function demoNotas(): NotaCampo[] {
+  const day = 86400000;
+  const t = Date.now();
+  const base = [
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", actividad: "negociacion", medio: "Campo", nota: "Interesado en cerrar semilla y herbicida para la campaña.", por: "Diego Romero" },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Soja", actividad: "presupuesto", medio: "Oficina cliente", nota: "Enviado presupuesto de semilla DM 46i20.", por: "Diego Romero" },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "visita_campo", medio: "Campo", nota: "Recorrida de lote, evaluación de malezas.", por: "Lucía Méndez" },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "venta", medio: "Oficina cliente", nota: "Cerró inoculante y parte de la semilla.", por: "Lucía Méndez" },
+    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", actividad: "inicio_contacto", medio: "Email", nota: "Primer contacto, agendar visita.", por: "Pablo Sosa" },
+    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", actividad: "agenda_visita", medio: "Agronomía", nota: "Visita coordinada para la próxima semana.", por: "Pablo Sosa" },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", actividad: "cobranza", medio: "Oficina cliente", nota: "Saldo de la operación anterior en gestión.", por: "Diego Romero" },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "en_proceso", medio: "Campo", nota: "Definiendo volumen de fertilizante.", por: "Lucía Méndez" },
+  ] as const;
+  return base.map((b, i) => ({
+    id: `nota-${i + 1}`,
+    fechaContacto: new Date(t - (base.length - i) * day).toISOString(),
+    productorId: b.productorId,
+    productorNombre: b.productorNombre,
+    cultivo: b.cultivo,
+    medio: b.medio as NotaCampo["medio"],
+    actividad: b.actividad as NotaCampo["actividad"],
+    notaVisita: b.nota,
+    creadoPor: b.por,
+    updatedAt: t - (base.length - i) * day,
+  }));
 }
