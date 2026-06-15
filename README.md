@@ -1,4 +1,4 @@
-# FOROAGROHUB
+# Chaja
 
 Plataforma de Agroventas de Precisión: un sistema de gestión comercial para empresas
 proveedoras del agro (agroinsumos, semillas, fitosanitarios, fertilizantes). Permite al

@@ -61,7 +61,7 @@ export function Productores() {
                 </div>
                 <div className="ml-3 shrink-0 text-right">
                   <p className="text-[11px] text-ink-muted">Valor cliente</p>
-                  <p className="font-display text-[14px] font-semibold text-primary">
+                  <p className="font-display text-[14px] font-semibold text-accent">
                     {formatUsd(valorClienteTotal(p))}
                   </p>
                 </div>

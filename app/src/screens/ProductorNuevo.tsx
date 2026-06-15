@@ -190,7 +190,7 @@ export function ProductorNuevo() {
 
               <p className="text-right text-[13px] text-ink-muted">
                 Valor cultivo:{" "}
-                <span className="font-semibold text-primary">{formatUsd(valorCultivo(toCultivo(c)))}</span>
+                <span className="font-semibold text-accent">{formatUsd(valorCultivo(toCultivo(c)))}</span>
               </p>
             </div>
           ))}
@@ -200,7 +200,7 @@ export function ProductorNuevo() {
       <div className="footer-actions space-y-2">
         <div className="flex items-center justify-between px-1">
           <span className="text-[14px] text-ink-muted">Valor cliente</span>
-          <span className="font-display text-[18px] font-bold text-primary">
+          <span className="font-display text-[18px] font-bold text-accent">
             {formatUsd(valorTotal)}
           </span>
         </div>

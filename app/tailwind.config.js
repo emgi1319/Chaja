@@ -5,21 +5,25 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#16BE78",
-          dark: "#12A668",
-          tint: "#E7F5EE",
+          DEFAULT: "#1B5E9B",
+          dark: "#14497A",
+          tint: "#E7EFF7",
+        },
+        accent: {
+          DEFAULT: "#1FA971",
+          dark: "#178A5B",
+          tint: "#E6F5EE",
         },
         ink: {
-          DEFAULT: "#222B2B",
-          soft: "#3A4444",
-          muted: "#7C8784",
+          DEFAULT: "#1B2733",
+          soft: "#3A4756",
+          muted: "#76828F",
         },
-        panel: "#1E2A28",
-        surface: "#F1F5F3",
-        line: "#E4EAE7",
-        accent: "#1E63B8",
+        panel: "#102A43",
+        surface: "#F2F5F8",
+        line: "#E2E8EF",
         danger: "#C0392B",
-        disabled: "#A9AFAD",
+        disabled: "#AAB3BC",
       },
       fontFamily: {
         display: ["Poppins", "system-ui", "sans-serif"],
