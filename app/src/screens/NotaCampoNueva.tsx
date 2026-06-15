@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TopBar, PrimaryButton, Field, Select } from "../components/ui";
+import { TopBar, PrimaryButton, SecondaryButton, Field, Dropdown, Toast } from "../components/ui";
 import { notasCampo, productores } from "../lib/api";
 import { newId } from "../lib/db";
 import {
@@ -69,20 +69,20 @@ export function NotaCampoNueva() {
           </p>
         ) : (
           <>
-            <Select
+            <Dropdown
               label="Productor"
               value={productorId}
               options={lista.map((p) => ({ value: p.id, label: p.razonSocial }))}
               onChange={setProductorId}
             />
             <Field label="Cultivo" value={cultivo} onChange={setCultivo} placeholder="Maíz, soja…" />
-            <Select
+            <Dropdown
               label="Medio / lugar"
               value={medio}
               options={MEDIOS_CONTACTO.map((m) => ({ value: m, label: m }))}
               onChange={setMedio}
             />
-            <Select
+            <Dropdown
               label="Actividad"
               value={actividad}
               options={ESTADOS_PROCESO.map((e) => ({ value: e, label: ESTADO_PROCESO_LABEL[e] }))}
@@ -104,17 +104,13 @@ export function NotaCampoNueva() {
 
       {lista.length > 0 && (
         <div className="footer-actions space-y-2">
-          <button
-            onClick={enviarWhatsapp}
-            className="press w-full rounded-2xl border border-line py-3 font-display text-[15px] font-semibold text-ink"
-          >
-            Enviar por WhatsApp
-          </button>
+          <SecondaryButton onClick={enviarWhatsapp}>Enviar por WhatsApp</SecondaryButton>
           <PrimaryButton disabled={saved} onClick={guardar}>
             {saved ? "Guardado" : "Guardar nota"}
           </PrimaryButton>
         </div>
       )}
+      <Toast show={saved} message="Nota guardada" />
     </div>
   );
 }

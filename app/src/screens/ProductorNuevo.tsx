@@ -95,7 +95,7 @@ export function ProductorNuevo() {
   return (
     <div className="screen">
       <TopBar title="Nuevo productor" />
-      <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto px-5 pb-4">
+      <div className="no-scrollbar fade-in flex-1 space-y-4 overflow-y-auto px-5 pb-4">
         <div className="space-y-3">
           <Field label="Razón social" value={razonSocial} onChange={setRazonSocial} />
           <Field label="Localidad" value={localidad} onChange={setLocalidad} />

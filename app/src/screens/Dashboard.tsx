@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { LogOut, Users, Target, TrendingUp, ClipboardList } from "lucide-react";
 import { useApp } from "../store";
 import { pendingTotal } from "../lib/api";
@@ -18,7 +19,7 @@ function Kpi({
 }) {
   const color = tone === "accent" ? "text-accent" : tone === "primary" ? "text-primary" : "text-ink";
   return (
-    <div className="card">
+    <div className="card card-hover">
       <div className="flex items-center gap-2 text-ink-muted">
         <Icon size={16} />
         <span className="text-[12px]">{label}</span>
@@ -29,11 +30,18 @@ function Kpi({
 }
 
 function Bar({ pct, tone = "primary" }: { pct: number; tone?: "primary" | "accent" }) {
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setW(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct]);
   return (
     <div className="h-2.5 w-full overflow-hidden rounded-pill bg-line">
       <div
-        className={`h-2.5 rounded-pill ${tone === "accent" ? "bg-accent" : "bg-primary"}`}
-        style={{ width: `${Math.min(100, Math.max(2, pct))}%` }}
+        className={`h-2.5 rounded-pill transition-[width] duration-700 ease-out ${
+          tone === "accent" ? "bg-accent" : "bg-primary"
+        }`}
+        style={{ width: `${Math.min(100, Math.max(2, w))}%` }}
       />
     </div>
   );
@@ -67,7 +75,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1100px] space-y-6 p-6">
+      <main className="fade-in mx-auto max-w-[1100px] space-y-6 p-6">
         {pend > 0 && (
           <p className="rounded-xl bg-primary-tint px-4 py-2 text-[13px] text-primary-dark">
             {pend} registro{pend === 1 ? "" : "s"} pendiente{pend === 1 ? "" : "s"} de sincronizar
@@ -96,7 +104,10 @@ export function Dashboard() {
               </thead>
               <tbody>
                 {ranking.map((r) => (
-                  <tr key={r.productor.id} className="border-t border-line">
+                  <tr
+                    key={r.productor.id}
+                    className="border-t border-line transition-colors hover:bg-surface"
+                  >
                     <td className="py-2">
                       <p className="font-medium text-ink">{r.productor.razonSocial}</p>
                       <p className="text-[11px] text-ink-muted">{r.productor.localidad || "—"}</p>

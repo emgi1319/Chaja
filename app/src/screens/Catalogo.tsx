@@ -15,8 +15,12 @@ export function Catalogo() {
           />
         ) : (
           <div className="space-y-2.5">
-            {catalogo.map((p) => (
-              <div key={p.id} className="card">
+            {catalogo.map((p, i) => (
+              <div
+                key={p.id}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="card card-hover fade-in-up"
+              >
                 <div className="flex items-center justify-between">
                   <p className="font-display text-[15px] font-semibold text-ink">{p.nombre}</p>
                   {typeof p.stock === "number" && (

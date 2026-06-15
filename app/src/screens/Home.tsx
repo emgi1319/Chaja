@@ -35,11 +35,12 @@ export function Home() {
       )}
 
       <div className="grid grid-cols-2 gap-3 px-5 pt-5">
-        {tiles.map((t) => (
+        {tiles.map((t, i) => (
           <button
             key={t.to}
             onClick={() => navigate(t.to)}
-            className="press flex aspect-square flex-col items-center justify-center gap-3 rounded-2xl bg-surface"
+            style={{ animationDelay: `${i * 60}ms` }}
+            className="tile fade-in-up flex aspect-square flex-col items-center justify-center gap-3 rounded-2xl bg-surface"
           >
             <t.icon size={34} className="text-primary" strokeWidth={1.8} />
             <span className="font-display text-[15px] font-semibold text-ink">{t.label}</span>

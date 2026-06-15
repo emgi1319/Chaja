@@ -26,15 +26,15 @@ export function Login() {
 
   return (
     <div className="screen justify-center px-7">
-      <div className="flex flex-col items-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary">
+      <div className="fade-in-up flex flex-col items-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary shadow-float">
           <span className="font-display text-[40px] font-bold leading-none text-white">C</span>
         </div>
         <h1 className="mt-4 font-display text-[24px] font-bold text-ink">Chaja</h1>
         <p className="mt-1 text-[14px] text-ink-muted">Ingresá con tu usuario del sistema</p>
       </div>
 
-      <div className="mt-8 space-y-3">
+      <div className="fade-in-up mt-8 space-y-3" style={{ animationDelay: "80ms" }}>
         <input
           value={usuario}
           onChange={(e) => setUsuario(e.target.value)}

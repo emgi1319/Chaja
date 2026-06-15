@@ -35,7 +35,7 @@ export function Productores() {
         }
       />
       <div className="px-5 pb-3">
-        <div className="flex items-center gap-2 rounded-2xl bg-surface px-3">
+        <div className="flex items-center gap-2 rounded-2xl border border-transparent bg-surface px-3 transition-all focus-within:border-primary/40 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10">
           <Search size={18} className="text-ink-muted" />
           <input
             value={q}
@@ -51,8 +51,12 @@ export function Productores() {
           <EmptyState title="Sin productores" hint="Agregá el primero con el botón +." />
         ) : (
           <div className="space-y-2.5">
-            {filtered.map((p) => (
-              <div key={p.id} className="card flex items-center justify-between">
+            {filtered.map((p, i) => (
+              <div
+                key={p.id}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="card card-hover fade-in-up flex items-center justify-between"
+              >
                 <div className="min-w-0">
                   <p className="truncate font-display text-[15px] font-semibold text-ink">
                     {p.razonSocial}
