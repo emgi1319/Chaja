@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function rol() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol;
+    }
+
+    function isManager() {
+      return signedIn() && rol() in ['supervisor', 'gerente'];
+    }
+
+    function ownsResource() {
+      return signedIn() && resource.data.owner == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow write: if request.auth.uid == uid || isManager();
+    }
+
+    // Carteras del equipo: el vendedor ve y edita lo suyo; supervisor y gerente, todo.
+    match /productores/{id} {
+      allow read: if isManager() || ownsResource();
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if isManager() || ownsResource();
+    }
+    match /actividades/{id} {
+      allow read: if isManager() || ownsResource();
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if isManager() || ownsResource();
+    }
+    match /operaciones/{id} {
+      allow read: if isManager() || ownsResource();
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if isManager() || ownsResource();
+    }
+    match /referidos/{id} {
+      allow read: if isManager() || ownsResource();
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid;
+      allow update, delete: if isManager() || ownsResource();
+    }
+
+    // Catálogo y parámetros: todos los usuarios leen; solo gerencia escribe.
+    match /productos/{id} {
+      allow read: if signedIn();
+      allow write: if isManager();
+    }
+    match /parametros/{id} {
+      allow read: if signedIn();
+      allow write: if isManager();
+    }
+  }
+}
