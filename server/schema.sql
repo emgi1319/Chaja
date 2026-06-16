@@ -1,0 +1,78 @@
+SET NAMES utf8mb4;
+
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(40) PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  usuario VARCHAR(80) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  rol ENUM('vendedor','supervisor','gerente') NOT NULL DEFAULT 'vendedor',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token CHAR(64) PRIMARY KEY,
+  user_id VARCHAR(40) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS productores (
+  id VARCHAR(40) PRIMARY KEY,
+  owner VARCHAR(40) NOT NULL,
+  razon_social VARCHAR(200) NOT NULL,
+  localidad VARCHAR(120),
+  data JSON NOT NULL,
+  updated_at BIGINT NOT NULL,
+  INDEX (owner)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS actividades (
+  id VARCHAR(40) PRIMARY KEY,
+  owner VARCHAR(40) NOT NULL,
+  productor_id VARCHAR(40) NOT NULL,
+  actividad VARCHAR(40) NOT NULL,
+  data JSON NOT NULL,
+  updated_at BIGINT NOT NULL,
+  INDEX (owner),
+  INDEX (productor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS operaciones (
+  id VARCHAR(40) PRIMARY KEY,
+  owner VARCHAR(40) NOT NULL,
+  productor_id VARCHAR(40) NOT NULL,
+  cultivo VARCHAR(80),
+  producto VARCHAR(200),
+  etapa VARCHAR(40),
+  estado VARCHAR(20),
+  valor_potencial DECIMAL(14,2),
+  data JSON NOT NULL,
+  updated_at BIGINT NOT NULL,
+  INDEX (owner),
+  INDEX (productor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS referidos (
+  id VARCHAR(40) PRIMARY KEY,
+  owner VARCHAR(40) NOT NULL,
+  nombre VARCHAR(200) NOT NULL,
+  proceso VARCHAR(40),
+  data JSON NOT NULL,
+  updated_at BIGINT NOT NULL,
+  INDEX (owner)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS productos (
+  id VARCHAR(40) PRIMARY KEY,
+  codigo VARCHAR(60),
+  categoria VARCHAR(60),
+  nombre VARCHAR(200) NOT NULL,
+  data JSON NOT NULL,
+  updated_at BIGINT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS parametros (
+  clave VARCHAR(80) PRIMARY KEY,
+  valor JSON NOT NULL,
+  updated_at BIGINT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -4,8 +4,8 @@ import { LocalCollection, newId } from "./db";
 // API_BASE vacío = modo local sin backend (la app funciona 100% offline contra
 // localStorage). Cuando el servidor PHP esté disponible, completar estos valores
 // y la sincronización se activa sola.
-const API_BASE = "";
-const API_KEY = "";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 export const LOCAL_MODE = !API_BASE;
 

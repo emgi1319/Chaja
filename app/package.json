@@ -19,7 +19,6 @@
     "@capacitor/status-bar": "^7.0.0",
     "@fontsource/inter": "^5.1.0",
     "@fontsource/poppins": "^5.1.0",
-    "firebase": "^12.15.0",
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
