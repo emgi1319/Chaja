@@ -1,5 +1,5 @@
 import { notasCampo, productores } from "./api";
-import { diferenciaTotal, formatUsd, valorClienteTotal } from "./valor-cliente";
+import { diferenciaTotal, formatUsd, valorClienteTotal, valorCultivo } from "./valor-cliente";
 import {
   ESTADOS_PROCESO,
   ESTADO_PROCESO_LABEL,
@@ -87,4 +87,74 @@ export function resumenCartera(): string[] {
     );
   }
   return lines;
+}
+
+function facturadoProductor(p: Productor): number {
+  return p.unidades.reduce(
+    (a, u) =>
+      a +
+      u.cultivos.reduce(
+        (ac, c) => ac + c.insumos.reduce((s, i) => s + (i.facturacionAnterior || 0), 0),
+        0,
+      ),
+    0,
+  );
+}
+
+export interface ProductorRow {
+  productor: Productor;
+  potencial: number;
+  facturado: number;
+  oportunidad: number;
+  captura: number;
+}
+
+export function productoresRows(): ProductorRow[] {
+  return productores
+    .list()
+    .map((p) => {
+      const potencial = valorClienteTotal(p);
+      const facturado = facturadoProductor(p);
+      return {
+        productor: p,
+        potencial,
+        facturado,
+        oportunidad: potencial - facturado,
+        captura: potencial > 0 ? facturado / potencial : 0,
+      };
+    })
+    .sort((a, b) => b.potencial - a.potencial);
+}
+
+export interface CultivoRow {
+  cultivo: string;
+  potencial: number;
+  facturado: number;
+  captura: number;
+}
+
+export function capturaPorCultivo(): CultivoRow[] {
+  const map = new Map<string, { potencial: number; facturado: number }>();
+  for (const p of productores.list()) {
+    for (const u of p.unidades) {
+      for (const c of u.cultivos) {
+        const cur = map.get(c.cultivo) ?? { potencial: 0, facturado: 0 };
+        cur.potencial += valorCultivo(c);
+        cur.facturado += c.insumos.reduce((s, i) => s + (i.facturacionAnterior || 0), 0);
+        map.set(c.cultivo, cur);
+      }
+    }
+  }
+  return [...map.entries()]
+    .map(([cultivo, v]) => ({
+      cultivo,
+      potencial: v.potencial,
+      facturado: v.facturado,
+      captura: v.potencial > 0 ? v.facturado / v.potencial : 0,
+    }))
+    .sort((a, b) => b.potencial - a.potencial);
+}
+
+export function formatPct(n: number): string {
+  return `${Math.round(n * 100)}%`;
 }
