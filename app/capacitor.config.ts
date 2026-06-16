@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.chaja.app",
-  appName: "Chaja",
+  appName: "Chajá",
   webDir: "dist",
   backgroundColor: "#ffffff",
   android: {
@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 800,
-      backgroundColor: "#1B5E9B",
+      backgroundColor: "#24613C",
       showSpinner: false,
     },
   },
