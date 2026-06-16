@@ -10,9 +10,21 @@ import {
   Target,
   TrendingUp,
   ClipboardList,
+  ArrowLeft,
+  Plus,
+  MapPin,
+  Phone,
 } from "lucide-react";
 import { useApp } from "../store";
-import { pendingTotal } from "../lib/api";
+import { notasCampo, pendingTotal, productores } from "../lib/api";
+import { newId } from "../lib/db";
+import { Dropdown } from "../components/ui";
+import {
+  ESTADOS_PROCESO,
+  ESTADO_PROCESO_LABEL,
+  type EstadoProceso,
+  type NotaCampo,
+} from "../types";
 import {
   carteraKpis,
   embudo,
@@ -21,7 +33,7 @@ import {
   resumenCartera,
   formatPct,
 } from "../lib/analytics";
-import { formatUsd } from "../lib/valor-cliente";
+import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { DEMO_VENDEDORES } from "../lib/demo-data";
 
 type Section = "inicio" | "clientes" | "equipo" | "productos" | "reportes";
@@ -183,8 +195,237 @@ function Inicio() {
   );
 }
 
+function formatFecha(iso?: string): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
+  const [, bump] = useState(0);
+  const productor = productores.get(id);
+  const row = productoresRows().find((r) => r.productor.id === id);
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [actividad, setActividad] = useState<EstadoProceso>("inicio_contacto");
+  const [nota, setNota] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  if (!productor || !row) return null;
+
+  const notas = notasCampo
+    .list()
+    .filter((n) => n.productorId === id)
+    .sort((a, b) => new Date(b.fechaContacto).getTime() - new Date(a.fechaContacto).getTime());
+
+  const primera = notas[notas.length - 1];
+  const venta = notas.find((n) => n.actividad === "venta");
+  const cultivos = productor.unidades.flatMap((u) => u.cultivos);
+
+  const agregar = async () => {
+    setSaving(true);
+    const nueva: NotaCampo = {
+      id: newId(),
+      fechaContacto: new Date(`${fecha}T12:00:00`).toISOString(),
+      productorId: id,
+      productorNombre: productor.razonSocial,
+      actividad,
+      notaVisita: nota,
+      updatedAt: Date.now(),
+    };
+    await notasCampo.save(nueva);
+    setNota("");
+    setSaving(false);
+    bump((v) => v + 1);
+  };
+
+  return (
+    <div className="space-y-5">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
+      >
+        <ArrowLeft size={16} /> Volver a clientes
+      </button>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-4">
+          <section className="card">
+            <h2 className="font-display text-[17px] font-semibold text-ink">
+              {productor.razonSocial}
+            </h2>
+            <div className="mt-2 space-y-1.5 text-[13px] text-ink-soft">
+              {productor.localidad && (
+                <p className="flex items-center gap-2">
+                  <MapPin size={14} className="text-ink-muted" />
+                  {productor.localidad}
+                </p>
+              )}
+              {(productor.celular || productor.telefono) && (
+                <p className="flex items-center gap-2">
+                  <Phone size={14} className="text-ink-muted" />
+                  {productor.celular || productor.telefono}
+                </p>
+              )}
+              {productor.email && <p className="text-ink-muted">{productor.email}</p>}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-line pt-3 text-[12px]">
+              <div>
+                <p className="text-ink-muted">Potencial</p>
+                <p className="font-semibold text-accent">{formatUsd(row.potencial)}</p>
+              </div>
+              <div>
+                <p className="text-ink-muted">Facturado</p>
+                <p className="font-semibold text-ink">{formatUsd(row.facturado)}</p>
+              </div>
+              <div>
+                <p className="text-ink-muted">Oportunidad</p>
+                <p className="font-semibold text-amber">{formatUsd(row.oportunidad)}</p>
+              </div>
+              <div>
+                <p className="text-ink-muted">Captura</p>
+                <p className="font-semibold text-ink">{formatPct(row.captura)}</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="card text-[13px]">
+            <h3 className="font-display text-[14px] font-semibold text-ink">Fechas clave</h3>
+            <dl className="mt-2 space-y-1.5">
+              <div className="flex justify-between">
+                <dt className="text-ink-muted">Primer contacto</dt>
+                <dd className="text-ink-soft">{formatFecha(primera?.fechaContacto)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-ink-muted">Última actividad</dt>
+                <dd className="text-ink-soft">{formatFecha(notas[0]?.fechaContacto)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-ink-muted">Estado actual</dt>
+                <dd className="font-medium text-ink">
+                  {notas[0] ? ESTADO_PROCESO_LABEL[notas[0].actividad] : "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-ink-muted">Cierre / venta</dt>
+                <dd className="text-ink-soft">{formatFecha(venta?.fechaContacto)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          {cultivos.length > 0 && (
+            <section className="card text-[13px]">
+              <h3 className="font-display text-[14px] font-semibold text-ink">Cultivos</h3>
+              <table className="mt-2 w-full">
+                <tbody>
+                  {cultivos.map((c) => (
+                    <tr key={c.id} className="border-t border-line first:border-0">
+                      <td className="py-1.5 text-ink-soft">
+                        {c.cultivo}
+                        <span className="text-ink-muted"> · {c.superficieHa} ha</span>
+                      </td>
+                      <td className="py-1.5 text-right font-semibold text-accent">
+                        {formatUsd(valorCultivo(c))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+        </div>
+
+        <div className="space-y-4 lg:col-span-2">
+          <section className="card">
+            <h3 className="font-display text-[14px] font-semibold text-ink">Registrar actividad</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1.5">
+                <span className="label">Fecha</span>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className="field"
+                />
+              </label>
+              <Dropdown
+                label="Actividad"
+                value={actividad}
+                onChange={setActividad}
+                options={ESTADOS_PROCESO.map((e) => ({ value: e, label: ESTADO_PROCESO_LABEL[e] }))}
+              />
+            </div>
+            <label className="mt-3 block space-y-1.5">
+              <span className="label">Nota</span>
+              <textarea
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                rows={2}
+                placeholder="Qué se habló o acordó"
+                className="field"
+              />
+            </label>
+            <button
+              onClick={agregar}
+              disabled={saving}
+              className="press mt-3 rounded-2xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:bg-disabled"
+            >
+              <span className="flex items-center gap-1.5">
+                <Plus size={16} /> Agregar al historial
+              </span>
+            </button>
+          </section>
+
+          <section className="card">
+            <h3 className="font-display text-[14px] font-semibold text-ink">Historial</h3>
+            {notas.length === 0 ? (
+              <p className="mt-2 text-[13px] text-ink-muted">Sin actividades registradas todavía.</p>
+            ) : (
+              <ol className="mt-3">
+                {notas.map((n, i) => (
+                  <li key={n.id} className="flex gap-3 pb-4 last:pb-0">
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                          n.actividad === "venta"
+                            ? "bg-accent"
+                            : n.actividad === "no_venta"
+                              ? "bg-danger"
+                              : "bg-primary"
+                        }`}
+                      />
+                      {i < notas.length - 1 && <span className="w-px flex-1 bg-line" />}
+                    </div>
+                    <div className="-mt-0.5 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-semibold text-ink">
+                          {ESTADO_PROCESO_LABEL[n.actividad]}
+                        </span>
+                        <span className="text-[11px] text-ink-muted">
+                          {formatFecha(n.fechaContacto)}
+                        </span>
+                      </div>
+                      {n.notaVisita && <p className="text-[12px] text-ink-soft">{n.notaVisita}</p>}
+                      {!n.synced && (
+                        <span className="text-[10px] text-amber">pendiente de sincronizar</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Clientes() {
   const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
   const all = productoresRows();
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -195,6 +436,8 @@ function Clientes() {
         (r.productor.localidad ?? "").toLowerCase().includes(t),
     );
   }, [q, all]);
+
+  if (selected) return <ClienteDetalle id={selected} onBack={() => setSelected(null)} />;
 
   return (
     <div className="space-y-4">
@@ -210,7 +453,11 @@ function Clientes() {
 
       <TableShell head={["Cliente", "Potencial", "Facturado", "Oportunidad", "% captura"]}>
         {rows.map((r) => (
-          <tr key={r.productor.id} className="border-t border-line transition-colors hover:bg-surface">
+          <tr
+            key={r.productor.id}
+            onClick={() => setSelected(r.productor.id)}
+            className="cursor-pointer border-t border-line transition-colors hover:bg-surface"
+          >
             <td className="px-4 py-3">
               <p className="font-medium text-ink">{r.productor.razonSocial}</p>
               <p className="text-[11px] text-ink-muted">{r.productor.localidad || "—"}</p>
