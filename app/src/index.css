@@ -129,3 +129,20 @@ button {
 .pop-in {
   animation: popIn 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer-overlay {
+  animation: fadeIn 0.2s ease both;
+}
+
+.drawer-panel {
+  animation: slideInRight 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

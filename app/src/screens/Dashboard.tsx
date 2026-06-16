@@ -19,6 +19,8 @@ import { useApp } from "../store";
 import { notasCampo, pendingTotal, productores } from "../lib/api";
 import { newId } from "../lib/db";
 import { Dropdown } from "../components/ui";
+import { Drawer } from "../components/drawer";
+import { ClienteForm } from "../components/cliente-form";
 import {
   ESTADOS_PROCESO,
   ESTADO_PROCESO_LABEL,
@@ -426,7 +428,9 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
 function Clientes() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
-  const all = productoresRows();
+  const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [version, setVersion] = useState(0);
+  const all = useMemo(() => productoresRows(), [version]);
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
     if (!t) return all;
@@ -441,14 +445,22 @@ function Clientes() {
 
   return (
     <div className="space-y-4">
-      <div className="flex max-w-sm items-center gap-2 rounded-2xl border border-transparent bg-white px-3 shadow-card transition-all focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10">
-        <Search size={18} className="text-ink-muted" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar cliente"
-          className="w-full bg-transparent py-2.5 text-[14px] outline-none"
-        />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex w-full max-w-sm items-center gap-2 rounded-2xl border border-transparent bg-white px-3 shadow-card transition-all focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10">
+          <Search size={18} className="text-ink-muted" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar cliente"
+            className="w-full bg-transparent py-2.5 text-[14px] outline-none"
+          />
+        </div>
+        <button
+          onClick={() => setNuevoOpen(true)}
+          className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+        >
+          <Plus size={17} /> Nuevo cliente
+        </button>
       </div>
 
       <TableShell head={["Cliente", "Potencial", "Facturado", "Oportunidad", "% captura"]}>
@@ -471,6 +483,15 @@ function Clientes() {
           </tr>
         ))}
       </TableShell>
+
+      <Drawer open={nuevoOpen} onClose={() => setNuevoOpen(false)} title="Nuevo cliente">
+        <ClienteForm
+          onSaved={() => {
+            setNuevoOpen(false);
+            setVersion((v) => v + 1);
+          }}
+        />
+      </Drawer>
     </div>
   );
 }
