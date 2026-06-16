@@ -176,3 +176,25 @@ export interface Referido extends Entity {
   observaciones?: string;
   creadoPor?: string;
 }
+
+export const ESTADOS_OPERACION = ["abierta", "ganada", "perdida"] as const;
+export type EstadoOperacion = (typeof ESTADOS_OPERACION)[number];
+
+export const ESTADO_OPERACION_LABEL: Record<EstadoOperacion, string> = {
+  abierta: "Abierta",
+  ganada: "Ganada",
+  perdida: "Perdida",
+};
+
+export interface Operacion extends Entity {
+  productorId: string;
+  productorNombre: string;
+  cultivo: string;
+  producto: string;
+  valorPotencial: number;
+  etapa: EstadoProceso;
+  estado: EstadoOperacion;
+  fechaInicio: string;
+  montoFacturado?: number;
+  creadoPor?: string;
+}

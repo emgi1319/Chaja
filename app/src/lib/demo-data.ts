@@ -1,4 +1,4 @@
-import type { NotaCampo, Producto, Productor } from "../types";
+import type { NotaCampo, Operacion, Producto, Productor, Referido } from "../types";
 
 // Datos de ejemplo para la demostración local. Se reemplazan por el catálogo y
 // la cartera reales del cliente una vez confirmado el Hito 1.
@@ -300,4 +300,30 @@ export function demoNotas(): NotaCampo[] {
     creadoPor: b.por,
     updatedAt: t - (base.length - i) * day,
   }));
+}
+
+export function demoReferidos(): Referido[] {
+  const t = Date.now();
+  const rows: Array<Omit<Referido, "id" | "updatedAt">> = [
+    { nombre: "Juan Pérez", referidor: "Nicolás Díaz", proceso: "venta", movil: "+54 9 2477 511111", estadoCivil: "Casado", observaciones: "Cerró compra de semilla." },
+    { nombre: "Marta Quiroga", referidor: "Oscar Juliá", proceso: "presupuesto", movil: "+54 9 3462 522222", observaciones: "Esperando respuesta al presupuesto." },
+    { nombre: "Sergio Benítez", referidor: "Alfredo Sosa", proceso: "visita", movil: "+54 9 2364 533333" },
+    { nombre: "Laura Gómez", referidor: "Marta Ferreyra", proceso: "envie_wp", movil: "+54 9 11 5444 4444" },
+    { nombre: "Raúl Medina", referidor: "Nicolás Díaz", proceso: "no_contesta", movil: "+54 9 2477 555555" },
+  ];
+  return rows.map((r, i) => ({ ...r, id: `ref-${i + 1}`, updatedAt: t - i * 3600000 }));
+}
+
+export function demoOperaciones(): Operacion[] {
+  const t = Date.now();
+  const day = 86400000;
+  const rows: Array<Omit<Operacion, "id" | "updatedAt">> = [
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", producto: "Semilla de maíz DK 7210", valorPotencial: 90000, etapa: "negociacion", estado: "abierta", fechaInicio: new Date(t - 10 * day).toISOString() },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", producto: "Glifosato", valorPotencial: 13500, etapa: "presupuesto", estado: "abierta", fechaInicio: new Date(t - 8 * day).toISOString() },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Soja", producto: "Semilla de soja", valorPotencial: 27000, etapa: "venta", estado: "ganada", fechaInicio: new Date(t - 20 * day).toISOString(), montoFacturado: 24000 },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", producto: "Inoculante", valorPotencial: 720, etapa: "venta", estado: "ganada", fechaInicio: new Date(t - 15 * day).toISOString(), montoFacturado: 720 },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", producto: "Semilla de soja", valorPotencial: 36000, etapa: "en_proceso", estado: "abierta", fechaInicio: new Date(t - 6 * day).toISOString() },
+    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", producto: "Semilla de maíz DK 7210", valorPotencial: 75000, etapa: "inicio_contacto", estado: "abierta", fechaInicio: new Date(t - 3 * day).toISOString() },
+  ];
+  return rows.map((r, i) => ({ ...r, id: `op-${i + 1}`, updatedAt: t - i * 3600000 }));
 }

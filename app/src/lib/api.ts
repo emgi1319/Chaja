@@ -1,4 +1,4 @@
-import type { Entity, Producto, Productor, NotaCampo, Referido, User } from "../types";
+import type { Entity, Operacion, Producto, Productor, NotaCampo, Referido, User } from "../types";
 import { LocalCollection, newId } from "./db";
 
 // API_BASE vacío = modo local sin backend (la app funciona 100% offline contra
@@ -96,18 +96,25 @@ export class SyncedCollection<T extends Entity> {
 export const productores = new SyncedCollection<Productor>("chaja.productores", "/productores");
 export const notasCampo = new SyncedCollection<NotaCampo>("chaja.notas_campo", "/notas-campo");
 export const referidos = new SyncedCollection<Referido>("chaja.referidos", "/referidos");
+export const operaciones = new SyncedCollection<Operacion>("chaja.operaciones", "/operaciones");
 
 export async function syncPending(): Promise<number> {
   const counts = await Promise.all([
     productores.syncPending(),
     notasCampo.syncPending(),
     referidos.syncPending(),
+    operaciones.syncPending(),
   ]);
   return counts.reduce((a, b) => a + b, 0);
 }
 
 export function pendingTotal(): number {
-  return productores.pendingCount() + notasCampo.pendingCount() + referidos.pendingCount();
+  return (
+    productores.pendingCount() +
+    notasCampo.pendingCount() +
+    referidos.pendingCount() +
+    operaciones.pendingCount()
+  );
 }
 
 function cacheGet<T>(key: string): T | null {

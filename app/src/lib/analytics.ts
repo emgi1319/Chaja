@@ -1,4 +1,4 @@
-import { notasCampo, productores } from "./api";
+import { notasCampo, operaciones, productores, referidos } from "./api";
 import { diferenciaTotal, formatUsd, valorClienteTotal, valorCultivo } from "./valor-cliente";
 import {
   ESTADOS_PROCESO,
@@ -157,4 +157,69 @@ export function capturaPorCultivo(): CultivoRow[] {
 
 export function formatPct(n: number): string {
   return `${Math.round(n * 100)}%`;
+}
+
+export interface SeguimientoRow {
+  productor: Productor;
+  etapa: EstadoProceso | null;
+  valor: number;
+  vendedor: string;
+  ultimaFecha: string | null;
+}
+
+export function seguimientoClientes(): SeguimientoRow[] {
+  const notas = notasCampo.list();
+  return productores
+    .list()
+    .map((p) => {
+      const ns = notas
+        .filter((n) => n.productorId === p.id)
+        .sort((a, b) => new Date(b.fechaContacto).getTime() - new Date(a.fechaContacto).getTime());
+      const ultima = ns[0];
+      return {
+        productor: p,
+        etapa: ultima ? ultima.actividad : null,
+        valor: valorClienteTotal(p),
+        vendedor: ultima?.creadoPor ?? p.creadoPor ?? "—",
+        ultimaFecha: ultima?.fechaContacto ?? null,
+      };
+    })
+    .sort((a, b) => b.valor - a.valor);
+}
+
+export function seguimientoStats() {
+  const rows = seguimientoClientes();
+  const enProceso = rows.filter(
+    (r) => r.etapa && !["venta", "no_venta", "cobranza"].includes(r.etapa),
+  ).length;
+  const ganados = rows.filter((r) => r.etapa === "venta" || r.etapa === "facturacion").length;
+  return {
+    clientes: rows.length,
+    valorTotal: rows.reduce((a, r) => a + r.valor, 0),
+    enProceso,
+    ganados,
+  };
+}
+
+export function operacionesStats() {
+  const ops = operaciones.list();
+  return {
+    total: ops.length,
+    valorEnJuego: ops
+      .filter((o) => o.estado === "abierta")
+      .reduce((a, o) => a + o.valorPotencial, 0),
+    ganadas: ops.filter((o) => o.estado === "ganada").length,
+  };
+}
+
+export function referidosStats() {
+  const rs = referidos.list();
+  const ventas = rs.filter((r) => r.proceso === "venta").length;
+  const cerrados = rs.filter((r) => r.proceso === "venta" || r.proceso === "no_venta").length;
+  return {
+    total: rs.length,
+    enGestion: rs.filter((r) => r.proceso !== "venta" && r.proceso !== "no_venta").length,
+    ventas,
+    conversion: cerrados > 0 ? ventas / cerrados : 0,
+  };
 }

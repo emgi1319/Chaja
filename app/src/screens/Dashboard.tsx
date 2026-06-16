@@ -14,9 +14,12 @@ import {
   Plus,
   MapPin,
   Phone,
+  Filter,
+  Boxes,
+  UserPlus,
 } from "lucide-react";
 import { useApp } from "../store";
-import { notasCampo, pendingTotal, productores } from "../lib/api";
+import { notasCampo, operaciones, pendingTotal, productores, referidos } from "../lib/api";
 import { newId } from "../lib/db";
 import { Dropdown } from "../components/ui";
 import { Drawer } from "../components/drawer";
@@ -24,6 +27,8 @@ import { ClienteForm } from "../components/cliente-form";
 import {
   ESTADOS_PROCESO,
   ESTADO_PROCESO_LABEL,
+  ESTADO_OPERACION_LABEL,
+  type EstadoOperacion,
   type EstadoProceso,
   type NotaCampo,
 } from "../types";
@@ -34,15 +39,30 @@ import {
   capturaPorCultivo,
   resumenCartera,
   formatPct,
+  seguimientoClientes,
+  seguimientoStats,
+  operacionesStats,
+  referidosStats,
 } from "../lib/analytics";
 import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { DEMO_VENDEDORES } from "../lib/demo-data";
 
-type Section = "inicio" | "clientes" | "equipo" | "productos" | "reportes";
+type Section =
+  | "inicio"
+  | "clientes"
+  | "seguimiento"
+  | "operaciones"
+  | "referidos"
+  | "equipo"
+  | "productos"
+  | "reportes";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
   { key: "clientes", label: "Clientes", icon: Users },
+  { key: "seguimiento", label: "Seguimiento", icon: Filter },
+  { key: "operaciones", label: "Operaciones", icon: Boxes },
+  { key: "referidos", label: "Referidos", icon: UserPlus },
   { key: "equipo", label: "Equipo", icon: UserCheck },
   { key: "productos", label: "Productos", icon: Package },
   { key: "reportes", label: "Reportes", icon: BarChart3 },
@@ -51,10 +71,148 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
 const SECTION_TITLE: Record<Section, string> = {
   inicio: "Resumen general",
   clientes: "Clientes",
+  seguimiento: "Seguimiento por cliente",
+  operaciones: "Operaciones por producto",
+  referidos: "Referidos",
   equipo: "Equipo de ventas",
   productos: "Productos",
   reportes: "Reportes",
 };
+
+const REF_LABEL: Record<string, string> = {
+  envie_email: "Envié email",
+  envie_wp: "Envié WhatsApp",
+  no_contesta: "No contesta",
+  respondido: "Respondido",
+  visita: "Visita",
+  presupuesto: "Presupuesto",
+  en_proceso: "En proceso",
+  no_venta: "No venta",
+  venta: "Venta",
+};
+
+function EtapaBadge({ etapa }: { etapa: EstadoProceso | null }) {
+  if (!etapa) return <span className="text-[12px] text-ink-muted">Sin actividad</span>;
+  const tone =
+    etapa === "venta" || etapa === "facturacion" || etapa === "cobranza"
+      ? "bg-accent/15 text-accent-dark"
+      : etapa === "no_venta"
+        ? "bg-danger/10 text-danger"
+        : "bg-primary/10 text-primary-dark";
+  return (
+    <span className={`rounded-pill px-2 py-0.5 text-[12px] font-medium ${tone}`}>
+      {ESTADO_PROCESO_LABEL[etapa]}
+    </span>
+  );
+}
+
+function OpEstadoBadge({ estado }: { estado: EstadoOperacion }) {
+  const tone =
+    estado === "ganada"
+      ? "bg-accent/15 text-accent-dark"
+      : estado === "perdida"
+        ? "bg-danger/10 text-danger"
+        : "bg-amber/15 text-amber";
+  return (
+    <span className={`rounded-pill px-2 py-0.5 text-[12px] font-semibold ${tone}`}>
+      {ESTADO_OPERACION_LABEL[estado]}
+    </span>
+  );
+}
+
+function Seguimiento() {
+  const rows = seguimientoClientes();
+  const s = seguimientoStats();
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi icon={Users} label="Clientes" value={String(s.clientes)} />
+        <Kpi icon={Target} label="Valor potencial" value={formatUsd(s.valorTotal)} tone="accent" />
+        <Kpi icon={Filter} label="En proceso" value={String(s.enProceso)} />
+        <Kpi icon={UserCheck} label="Ganados" value={String(s.ganados)} tone="accent" />
+      </div>
+      <TableShell head={["Cliente", "Vendedor", "Etapa", "Valor potencial", "Última actividad"]}>
+        {rows.map((r) => (
+          <tr
+            key={r.productor.id}
+            className="border-t border-line transition-colors hover:bg-surface"
+          >
+            <td className="px-4 py-3 font-medium text-ink">{r.productor.razonSocial}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.vendedor}</td>
+            <td className="px-4 py-3 text-right">
+              <EtapaBadge etapa={r.etapa} />
+            </td>
+            <td className="px-4 py-3 text-right font-semibold text-accent">{formatUsd(r.valor)}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">
+              {formatFecha(r.ultimaFecha ?? undefined)}
+            </td>
+          </tr>
+        ))}
+      </TableShell>
+    </div>
+  );
+}
+
+function Operaciones() {
+  const ops = operaciones.list();
+  const s = operacionesStats();
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <Kpi icon={Boxes} label="Operaciones" value={String(s.total)} />
+        <Kpi icon={Target} label="Valor en juego" value={formatUsd(s.valorEnJuego)} tone="amber" />
+        <Kpi icon={UserCheck} label="Ganadas" value={String(s.ganadas)} tone="accent" />
+      </div>
+      <TableShell head={["Cliente", "Cultivo", "Producto", "Valor", "Etapa", "Estado"]}>
+        {ops.map((o) => (
+          <tr key={o.id} className="border-t border-line transition-colors hover:bg-surface">
+            <td className="px-4 py-3 font-medium text-ink">{o.productorNombre}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">{o.cultivo}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">{o.producto}</td>
+            <td className="px-4 py-3 text-right font-semibold text-accent">
+              {formatUsd(o.valorPotencial)}
+            </td>
+            <td className="px-4 py-3 text-right">
+              <EtapaBadge etapa={o.etapa} />
+            </td>
+            <td className="px-4 py-3 text-right">
+              <OpEstadoBadge estado={o.estado} />
+            </td>
+          </tr>
+        ))}
+      </TableShell>
+    </div>
+  );
+}
+
+function Referidos() {
+  const rs = referidos.list();
+  const s = referidosStats();
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi icon={UserPlus} label="Referidos" value={String(s.total)} />
+        <Kpi icon={Filter} label="En gestión" value={String(s.enGestion)} />
+        <Kpi icon={UserCheck} label="Ventas" value={String(s.ventas)} tone="accent" />
+        <Kpi icon={TrendingUp} label="Conversión" value={formatPct(s.conversion)} tone="accent" />
+      </div>
+      <TableShell head={["Referido", "Referidor", "Estado", "Contacto"]}>
+        {rs.map((r) => (
+          <tr key={r.id} className="border-t border-line transition-colors hover:bg-surface">
+            <td className="px-4 py-3 font-medium text-ink">{r.nombre}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.referidor || "—"}</td>
+            <td className="px-4 py-3 text-right">
+              <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[12px] font-medium text-primary-dark">
+                {REF_LABEL[r.proceso] ?? r.proceso}
+              </span>
+            </td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.movil || r.email || "—"}</td>
+          </tr>
+        ))}
+      </TableShell>
+    </div>
+  );
+}
 
 function Bar({ pct, tone = "primary" }: { pct: number; tone?: "primary" | "accent" | "amber" }) {
   const [w, setW] = useState(0);
@@ -651,6 +809,9 @@ export function Dashboard() {
         <main key={section} className="fade-in flex-1 overflow-y-auto p-6">
           {section === "inicio" && <Inicio />}
           {section === "clientes" && <Clientes />}
+          {section === "seguimiento" && <Seguimiento />}
+          {section === "operaciones" && <Operaciones />}
+          {section === "referidos" && <Referidos />}
           {section === "equipo" && <Equipo />}
           {section === "productos" && <Productos />}
           {section === "reportes" && <Reportes />}
