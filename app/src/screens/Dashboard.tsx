@@ -751,6 +751,7 @@ export function Dashboard() {
   const user = useApp((s) => s.user)!;
   const logout = useApp((s) => s.logout);
   const [section, setSection] = useState<Section>("inicio");
+  const dataVersion = useApp((s) => s.dataVersion);
   const pend = pendingTotal();
 
   return (
@@ -806,7 +807,7 @@ export function Dashboard() {
             </span>
           )}
         </header>
-        <main key={section} className="fade-in flex-1 overflow-y-auto p-6">
+        <main key={`${section}-${dataVersion}`} className="fade-in flex-1 overflow-y-auto p-6">
           {section === "inicio" && <Inicio />}
           {section === "clientes" && <Clientes />}
           {section === "seguimiento" && <Seguimiento />}

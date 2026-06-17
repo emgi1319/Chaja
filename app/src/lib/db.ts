@@ -49,6 +49,10 @@ export class LocalCollection<T extends Entity> {
     const item = this.get(id);
     if (item) this.upsert({ ...item, synced: true });
   }
+
+  replaceAll(items: T[]): void {
+    this.writeAll(items);
+  }
 }
 
 export function newId(): string {

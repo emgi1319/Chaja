@@ -5,20 +5,31 @@ import { LocalCollection, newId } from "./db";
 // localStorage). Cuando el servidor PHP esté disponible, completar estos valores
 // y la sincronización se activa sola.
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 export const LOCAL_MODE = !API_BASE;
 
 const CATALOG_KEY = "chaja.catalogo";
 const USER_KEY = "chaja.user";
+const TOKEN_KEY = "chaja.token";
+
+export function readToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+function storeToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE) throw new Error("offline");
+  const token = readToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "X-Api-Key": API_KEY,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -91,6 +102,17 @@ export class SyncedCollection<T extends Entity> {
     }
     return done;
   }
+
+  // Trae del servidor y reemplaza el cache local (marcado como sincronizado).
+  async pull(): Promise<void> {
+    if (!API_BASE) return;
+    try {
+      const items = await request<T[]>(this.remotePath);
+      this.local.replaceAll(items.map((i) => ({ ...i, synced: true })));
+    } catch {
+      // sin conexión: se conserva lo que haya local
+    }
+  }
 }
 
 export const productores = new SyncedCollection<Productor>("chaja.productores", "/productores");
@@ -106,6 +128,15 @@ export async function syncPending(): Promise<number> {
     operaciones.syncPending(),
   ]);
   return counts.reduce((a, b) => a + b, 0);
+}
+
+export async function pullAll(): Promise<void> {
+  await Promise.all([
+    productores.pull(),
+    notasCampo.pull(),
+    referidos.pull(),
+    operaciones.pull(),
+  ]);
 }
 
 export function pendingTotal(): number {
@@ -153,6 +184,7 @@ export function storeUser(user: User): void {
 
 export function clearUser(): void {
   localStorage.removeItem(USER_KEY);
+  clearToken();
 }
 
 // Login. Con backend valida contra el servidor. Sin backend (demo), acepta la
@@ -160,10 +192,12 @@ export function clearUser(): void {
 // TODO(backend): reemplazar el modo local por autenticación real contra la API.
 export async function login(usuario: string, password: string): Promise<User> {
   if (API_BASE) {
-    return request<User>("/login", {
+    const res = await request<{ token: string; user: User }>("/login", {
       method: "POST",
       body: JSON.stringify({ usuario, password }),
     });
+    storeToken(res.token);
+    return res.user;
   }
   if (password !== "demo") throw new Error("credenciales");
   const lower = usuario.toLowerCase();
