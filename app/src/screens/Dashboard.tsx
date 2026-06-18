@@ -22,6 +22,7 @@ import {
   Calculator,
   Sliders,
   Bird,
+  ClipboardCheck,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos } from "../lib/api";
@@ -29,6 +30,7 @@ import { newId } from "../lib/db";
 import { Dropdown } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
+import { CargarActividad } from "../components/cargar-actividad";
 import {
   CULTIVOS,
   ESTADOS_PROCESO,
@@ -60,6 +62,7 @@ type Section =
   | "seguimiento"
   | "operaciones"
   | "referidos"
+  | "actividad"
   | "equipo"
   | "productos"
   | "valorcliente"
@@ -72,6 +75,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "seguimiento", label: "Seguimiento", icon: Filter },
   { key: "operaciones", label: "Operaciones", icon: Boxes },
   { key: "referidos", label: "Referidos", icon: UserPlus },
+  { key: "actividad", label: "Cargar actividad", icon: ClipboardCheck },
   { key: "equipo", label: "Equipo", icon: UserCheck },
   { key: "productos", label: "Productos", icon: Package },
   { key: "valorcliente", label: "Valor cliente", icon: Calculator },
@@ -85,6 +89,7 @@ const SECTION_TITLE: Record<Section, string> = {
   seguimiento: "Seguimiento por cliente",
   operaciones: "Operaciones por producto",
   referidos: "Referidos",
+  actividad: "Cargar actividad",
   equipo: "Equipo de ventas",
   productos: "Productos",
   valorcliente: "Valor cliente",
@@ -1014,6 +1019,7 @@ export function Dashboard() {
           {section === "seguimiento" && <Seguimiento />}
           {section === "operaciones" && <Operaciones />}
           {section === "referidos" && <Referidos />}
+          {section === "actividad" && <CargarActividad />}
           {section === "equipo" && <Equipo />}
           {section === "productos" && <Productos />}
           {section === "valorcliente" && <ValorClienteScreen />}
