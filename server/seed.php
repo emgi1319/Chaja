@@ -70,6 +70,17 @@ $productores = [
             ],
         ]],
     ],
+    [
+        'id' => 'p3', 'razonSocial' => 'Campo Verde', 'vendedor' => 'Diego Romero', 'localidad' => 'Río Cuarto',
+        'celular' => '+54 9 358 5551234', 'contactos' => [],
+        'unidades' => [[
+            'id' => 'p3-u1',
+            'cultivos' => [
+                ['id' => 'p3-c1', 'cultivo' => 'Maíz', 'superficieHa' => 500, 'facturado' => 90000],
+                ['id' => 'p3-c2', 'cultivo' => 'Soja', 'superficieHa' => 380, 'facturado' => 40000],
+            ],
+        ]],
+    ],
 ];
 $stmtPdor = $pdo->prepare(
     'INSERT INTO productores (id, owner, razon_social, localidad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)

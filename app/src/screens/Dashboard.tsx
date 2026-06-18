@@ -54,10 +54,11 @@ import {
   referidosStats,
   campaignTotals,
   alertasCartera,
+  vendedoresResumen,
+  proximaAccion,
 } from "../lib/analytics";
 import { formatUsd, valorCultivo, facturadoCultivo, oportunidadCultivo } from "../lib/valor-cliente";
 import { getCostosHa, setCostosHa, costoHa } from "../lib/parametros";
-import { DEMO_VENDEDORES } from "../lib/demo-data";
 
 type Section =
   | "inicio"
@@ -152,7 +153,7 @@ function Seguimiento() {
         <Kpi icon={Filter} label="En proceso" value={String(s.enProceso)} />
         <Kpi icon={UserCheck} label="Ganados" value={String(s.ganados)} tone="accent" />
       </div>
-      <TableShell head={["Cliente", "Vendedor", "Etapa", "Valor potencial", "Última actividad"]}>
+      <TableShell head={["Cliente", "Vendedor", "Etapa", "Valor potencial", "Próxima acción"]}>
         {rows.map((r) => (
           <tr
             key={r.productor.id}
@@ -164,9 +165,7 @@ function Seguimiento() {
               <EtapaBadge etapa={r.etapa} />
             </td>
             <td className="px-4 py-3 text-right font-semibold text-accent">{formatUsd(r.valor)}</td>
-            <td className="px-4 py-3 text-right text-ink-soft">
-              {formatFecha(r.ultimaFecha ?? undefined)}
-            </td>
+            <td className="px-4 py-3 text-right text-ink-soft">{proximaAccion(r.etapa)}</td>
           </tr>
         ))}
       </TableShell>
@@ -187,7 +186,10 @@ function Operaciones() {
       <TableShell head={["Cliente", "Cultivo", "Producto", "Valor", "Etapa", "Estado"]}>
         {ops.map((o) => (
           <tr key={o.id} className="border-t border-line transition-colors hover:bg-surface">
-            <td className="px-4 py-3 font-medium text-ink">{o.productorNombre}</td>
+            <td className="px-4 py-3">
+              <p className="font-medium text-ink">{o.productorNombre}</p>
+              <p className="text-[11px] uppercase text-ink-muted">{o.id}</p>
+            </td>
             <td className="px-4 py-3 text-right text-ink-soft">{o.cultivo}</td>
             <td className="px-4 py-3 text-right text-ink-soft">{o.producto}</td>
             <td className="px-4 py-3 text-right font-semibold text-accent">
@@ -232,6 +234,10 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
   const [proceso, setProceso] = useState<string>("envie_email");
   const [observaciones, setObservaciones] = useState("");
   const [hectareas, setHectareas] = useState("");
+  const [estadoCivil, setEstadoCivil] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [hobbys, setHobbys] = useState("");
+  const [deportes, setDeportes] = useState("");
   const [saving, setSaving] = useState(false);
   const guardar = async () => {
     if (!nombre.trim()) return;
@@ -245,6 +251,10 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
       proceso: proceso as Referido["proceso"],
       observaciones,
       hectareas: numv(hectareas),
+      estadoCivil,
+      fechaNacimiento,
+      hobbys,
+      deportes,
       creadoPor: user?.nombre,
       updatedAt: Date.now(),
     });
@@ -257,6 +267,16 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
       <Field label="Referidor" value={referidor} onChange={setReferidor} />
       <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
       <Field label="Móvil" value={movil} onChange={setMovil} inputMode="tel" />
+      <label className="block space-y-1.5">
+        <span className="label">Fecha de nacimiento</span>
+        <input
+          type="date"
+          value={fechaNacimiento}
+          onChange={(e) => setFechaNacimiento(e.target.value)}
+          className="field"
+        />
+      </label>
+      <Field label="Estado civil" value={estadoCivil} onChange={setEstadoCivil} />
       <Dropdown
         label="Proceso"
         value={proceso}
@@ -264,6 +284,8 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
         onChange={setProceso}
       />
       <Field label="Hectáreas" value={hectareas} onChange={setHectareas} inputMode="decimal" />
+      <Field label="Hobbys" value={hobbys} onChange={setHobbys} />
+      <Field label="Deportes" value={deportes} onChange={setDeportes} />
       <label className="block space-y-1.5">
         <span className="label">Observaciones</span>
         <textarea
@@ -456,7 +478,8 @@ function Inicio() {
   const objetivo = t.potencial;
   const avance = objetivo > 0 ? t.facturado / objetivo : 0;
   const alertas = alertasCartera();
-  const maxLogrado = Math.max(1, ...DEMO_VENDEDORES.map((v) => v.logrado));
+  const ranking = vendedoresResumen();
+  const maxFact = Math.max(1, ...ranking.map((v) => v.facturado));
 
   return (
     <div className="space-y-6">
@@ -488,35 +511,32 @@ function Inicio() {
       <section className="card">
         <h2 className="font-display text-[15px] font-semibold text-ink">Ranking de vendedores</h2>
         <div className="mt-3 space-y-3">
-          {[...DEMO_VENDEDORES]
-            .sort((a, b) => b.logrado - a.logrado)
-            .map((v) => {
-              const pct = v.logrado / v.objetivo;
-              const ini = v.nombre
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase();
-              return (
-                <div key={v.nombre} className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
-                    {ini}
+          {ranking.map((v) => {
+            const ini = v.vendedor
+              .split(" ")
+              .map((w) => w[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase();
+            return (
+              <div key={v.vendedor} className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
+                  {ini}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="font-medium text-ink">{v.vendedor}</span>
+                    <span className="text-ink-muted">
+                      {formatUsd(v.facturado)} · {formatPct(v.captura)}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between text-[13px]">
-                      <span className="font-medium text-ink">{v.nombre}</span>
-                      <span className="text-ink-muted">
-                        {formatUsd(v.logrado)} · {formatPct(pct)}
-                      </span>
-                    </div>
-                    <div className="mt-1">
-                      <Bar pct={(v.logrado / maxLogrado) * 100} />
-                    </div>
+                  <div className="mt-1">
+                    <Bar pct={(v.facturado / maxFact) * 100} />
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -839,28 +859,39 @@ function Clientes() {
 }
 
 function Equipo() {
+  const vendedores = vendedoresResumen();
   return (
-    <TableShell head={["Vendedor", "Objetivo", "Logrado", "Cumplimiento", "Referidos"]}>
-      {DEMO_VENDEDORES.map((v) => {
-        const pct = v.logrado / v.objetivo;
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {vendedores.map((v) => {
+        const ini = v.vendedor
+          .split(" ")
+          .map((w) => w[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase();
         return (
-          <tr key={v.nombre} className="border-t border-line transition-colors hover:bg-surface">
-            <td className="px-4 py-3 font-medium text-ink">{v.nombre}</td>
-            <td className="px-4 py-3 text-right text-ink-soft">{formatUsd(v.objetivo)}</td>
-            <td className="px-4 py-3 text-right font-semibold text-accent">{formatUsd(v.logrado)}</td>
-            <td className="px-4 py-3">
-              <div className="flex items-center justify-end gap-2">
-                <div className="w-28">
-                  <Bar pct={pct * 100} tone={pct >= 0.8 ? "accent" : "amber"} />
-                </div>
-                <span className="w-10 text-right text-[12px] text-ink-muted">{formatPct(pct)}</span>
+          <div key={v.vendedor} className="card card-hover space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
+                {ini}
               </div>
-            </td>
-            <td className="px-4 py-3 text-right text-ink-soft">{v.referidos}</td>
-          </tr>
+              <p className="font-display text-[15px] font-semibold text-ink">{v.vendedor}</p>
+            </div>
+            <p className="text-[13px] text-ink-muted">
+              {v.clientes} cliente{v.clientes === 1 ? "" : "s"} · {v.hectareas} ha
+            </p>
+            <p className="text-[13px] text-ink-soft">
+              Facturado <span className="font-semibold text-ink">{formatUsd(v.facturado)}</span>
+            </p>
+            <p className="text-[13px] text-ink-soft">
+              Oportunidad <span className="font-semibold text-amber">{formatUsd(v.oportunidad)}</span>
+            </p>
+            <Bar pct={v.captura * 100} tone={v.captura >= 0.7 ? "accent" : "amber"} />
+            <p className="text-[12px] text-ink-muted">{formatPct(v.captura)} capturado</p>
+          </div>
         );
       })}
-    </TableShell>
+    </div>
   );
 }
 
@@ -933,21 +964,33 @@ function Reportes() {
 
       <section className="card">
         <h2 className="font-display text-[15px] font-semibold text-ink">
-          Cumplimiento por vendedor
+          Cartera por vendedor — facturado vs oportunidad
         </h2>
         <div className="mt-3 space-y-4">
-          {DEMO_VENDEDORES.map((v) => {
-            const pct = v.logrado / v.objetivo;
+          {vendedoresResumen().map((v) => {
+            const total = v.facturado + v.oportunidad;
+            const facPct = total > 0 ? (v.facturado / total) * 100 : 0;
             return (
-              <div key={v.nombre}>
+              <div key={v.vendedor}>
                 <div className="mb-1 flex items-center justify-between text-[12px]">
-                  <span className="font-medium text-ink">{v.nombre}</span>
-                  <span className="text-ink-muted">{formatPct(pct)}</span>
+                  <span className="font-medium text-ink">{v.vendedor}</span>
+                  <span className="text-ink-muted">{formatUsd(total)}</span>
                 </div>
-                <Bar pct={pct * 100} tone={pct >= 0.8 ? "accent" : "amber"} />
+                <div className="flex h-2.5 w-full overflow-hidden rounded-pill bg-line">
+                  <div className="h-2.5 bg-primary" style={{ width: `${facPct}%` }} />
+                  <div className="h-2.5 bg-amber" style={{ width: `${100 - facPct}%` }} />
+                </div>
               </div>
             );
           })}
+          <div className="flex gap-4 text-[11px] text-ink-muted">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-primary" /> Facturado
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber" /> Oportunidad
+            </span>
+          </div>
         </div>
       </section>
     </div>

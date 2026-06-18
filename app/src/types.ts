@@ -72,6 +72,7 @@ export interface UnidadProductiva {
 export interface Productor extends Entity {
   razonSocial: string;
   vendedor?: string;
+  campania?: string;
   cuitRut?: string;
   direccion?: string;
   localidad?: string;
@@ -175,6 +176,7 @@ export interface Referido extends Entity {
   deportes?: string;
   estadoCivil?: string;
   edadAprox?: string;
+  fechaNacimiento?: string;
   observaciones?: string;
   hectareas?: number;
   creadoPor?: string;

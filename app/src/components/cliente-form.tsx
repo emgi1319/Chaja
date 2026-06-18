@@ -28,6 +28,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [vendedor, setVendedor] = useState(DEMO_VENDEDORES[0]?.nombre ?? "");
+  const [campania, setCampania] = useState("2025/26");
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
   const [saving, setSaving] = useState(false);
 
@@ -42,6 +43,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
       id: newId(),
       razonSocial: razonSocial.trim(),
       vendedor,
+      campania,
       localidad,
       telefono,
       email,
@@ -67,6 +69,12 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
           value={vendedor}
           options={DEMO_VENDEDORES.map((v) => ({ value: v.nombre, label: v.nombre }))}
           onChange={setVendedor}
+        />
+        <Dropdown
+          label="Campaña"
+          value={campania}
+          options={["2025/26", "2024/25"].map((c) => ({ value: c, label: c }))}
+          onChange={setCampania}
         />
       </div>
 

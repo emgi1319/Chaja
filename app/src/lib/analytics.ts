@@ -247,6 +247,56 @@ export function campaignTotals(): CampaignTotals {
   };
 }
 
+export interface VendedorResumen {
+  vendedor: string;
+  clientes: number;
+  hectareas: number;
+  facturado: number;
+  potencial: number;
+  oportunidad: number;
+  captura: number;
+}
+
+export function vendedoresResumen(): VendedorResumen[] {
+  const map = new Map<string, VendedorResumen>();
+  for (const r of productoresRows()) {
+    const v = r.productor.vendedor || "Sin asignar";
+    const cur =
+      map.get(v) ??
+      { vendedor: v, clientes: 0, hectareas: 0, facturado: 0, potencial: 0, oportunidad: 0, captura: 0 };
+    cur.clientes += 1;
+    cur.hectareas += r.hectareas;
+    cur.facturado += r.facturado;
+    cur.potencial += r.potencial;
+    cur.oportunidad += r.oportunidad;
+    map.set(v, cur);
+  }
+  return [...map.values()]
+    .map((v) => ({ ...v, captura: v.potencial > 0 ? v.facturado / v.potencial : 0 }))
+    .sort((a, b) => b.facturado - a.facturado);
+}
+
+const PROXIMA_ACCION: Record<string, string> = {
+  inicio_contacto: "Agendar reunión",
+  completar_datos: "Completar la ficha",
+  agenda_visita: "Coordinar visita",
+  visita_campo: "Enviar asesoría",
+  reunion_oficina: "Pasar a presupuesto",
+  asesoria: "Armar presupuesto",
+  presupuesto: "Seguir presupuesto enviado",
+  en_proceso: "Avanzar negociación",
+  negociacion: "Cerrar condiciones",
+  venta: "Coordinar entrega",
+  no_venta: "Reactivar más adelante",
+  facturacion: "Gestionar cobranza",
+  cobranza: "Cerrar cobranza",
+  otros: "Definir próximo paso",
+};
+
+export function proximaAccion(etapa: string | null): string {
+  return etapa ? (PROXIMA_ACCION[etapa] ?? "Definir próximo paso") : "Iniciar contacto";
+}
+
 export function alertasCartera(): string[] {
   const rows = productoresRows().filter((r) => r.potencial > 0);
   const out: string[] = [];
