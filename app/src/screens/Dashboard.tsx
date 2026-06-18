@@ -25,6 +25,8 @@ import {
   ClipboardCheck,
   Eye,
   Trash2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
@@ -1255,32 +1257,61 @@ export function Dashboard() {
   const user = useApp((s) => s.user)!;
   const logout = useApp((s) => s.logout);
   const [section, setSection] = useState<Section>("inicio");
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("chaja.sidebar_collapsed") === "1",
+  );
+  const toggleSidebar = () =>
+    setCollapsed((v) => {
+      localStorage.setItem("chaja.sidebar_collapsed", v ? "0" : "1");
+      return !v;
+    });
   const dataVersion = useApp((s) => s.dataVersion);
   const pend = pendingTotal();
 
   return (
     <div className="flex h-full bg-surface">
-      <aside className="flex w-16 shrink-0 flex-col bg-panel text-white md:w-60">
+      <aside
+        className={`flex shrink-0 flex-col bg-panel text-white transition-all ${
+          collapsed ? "w-16" : "w-16 md:w-60"
+        }`}
+      >
         <div className="flex items-center gap-2 px-4 py-5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
             <Bird size={20} strokeWidth={2} />
           </div>
-          <span className="hidden font-display text-[18px] font-bold tracking-wide md:inline">CHAJÁ</span>
+          <span
+            className={`font-display text-[18px] font-bold tracking-wide ${
+              collapsed ? "hidden" : "hidden md:inline"
+            }`}
+          >
+            CHAJÁ
+          </span>
         </div>
 
-        <nav className="mt-2 flex-1 space-y-1 px-2">
+        <button
+          onClick={toggleSidebar}
+          aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+          className="mx-2 mb-1 hidden items-center justify-center rounded-xl py-2 text-white/55 transition-colors hover:bg-white/10 hover:text-white md:flex"
+        >
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+
+        <nav className="mt-1 flex-1 space-y-1 px-2">
           {NAV.map((n) => {
             const active = n.key === section;
             return (
               <button
                 key={n.key}
                 onClick={() => setSection(n.key)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition-colors ${
+                title={n.label}
+                className={`flex w-full items-center rounded-xl px-3 py-2.5 text-[14px] transition-colors ${
+                  collapsed ? "justify-center" : "gap-3"
+                } ${
                   active ? "bg-white/15 font-semibold text-white" : "text-white/65 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <n.icon size={19} className="shrink-0" />
-                <span className="hidden md:inline">{n.label}</span>
+                <span className={collapsed ? "hidden" : "hidden md:inline"}>{n.label}</span>
               </button>
             );
           })}
@@ -1291,7 +1322,7 @@ export function Dashboard() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold">
               {user.nombre.charAt(0).toUpperCase()}
             </div>
-            <div className="hidden min-w-0 flex-1 md:block">
+            <div className={collapsed ? "hidden" : "hidden min-w-0 flex-1 md:block"}>
               <p className="truncate text-[13px] font-medium">{user.nombre}</p>
               <p className="text-[11px] capitalize text-white/55">{user.rol}</p>
             </div>
