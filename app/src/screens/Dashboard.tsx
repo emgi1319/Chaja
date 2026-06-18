@@ -59,7 +59,15 @@ import {
   proximaAccion,
 } from "../lib/analytics";
 import { formatUsd, valorCultivo, facturadoCultivo, oportunidadCultivo } from "../lib/valor-cliente";
-import { getCostosHa, setCostosHa, costoHa } from "../lib/parametros";
+import {
+  setCostosHa,
+  costoHa,
+  getConfig,
+  getObjetivoCampania,
+  getNombreCampania,
+  setObjetivoCampania,
+  setNombreCampania,
+} from "../lib/parametros";
 
 type Section =
   | "inicio"
@@ -531,7 +539,7 @@ function TableShell({ head, children }: { head: string[]; children: ReactNode })
 
 function Inicio() {
   const t = campaignTotals();
-  const objetivo = t.potencial;
+  const objetivo = getObjetivoCampania() || t.potencial;
   const avance = objetivo > 0 ? t.facturado / objetivo : 0;
   const alertas = alertasCartera();
   const ranking = vendedoresResumen();
@@ -540,7 +548,9 @@ function Inicio() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-[18px] font-semibold text-ink">Panel de la campaña 2025/26</h2>
+        <h2 className="font-display text-[18px] font-semibold text-ink">
+          Panel de la campaña {getNombreCampania()}
+        </h2>
         <p className="text-[13px] text-ink-muted">Resumen de tu operación comercial en tiempo real.</p>
       </div>
 
@@ -1054,15 +1064,47 @@ function Reportes() {
 }
 
 function Parametros() {
-  const [costos, setCostos] = useState<Record<string, number>>(getCostosHa());
+  const cfg = getConfig();
+  const [costos, setCostos] = useState<Record<string, number>>(cfg.costosHa);
+  const [objetivo, setObjetivo] = useState<number>(cfg.objetivoCampania);
+  const [nombre, setNombre] = useState<string>(cfg.nombreCampania);
   const [saved, setSaved] = useState(false);
   const guardar = () => {
     setCostosHa(costos);
+    setObjetivoCampania(objetivo);
+    setNombreCampania(nombre);
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
   return (
     <div className="max-w-lg space-y-4">
+      <div className="card space-y-3">
+        <p className="font-display text-[14px] font-semibold text-ink">Campaña</p>
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-[14px] text-ink">Nombre de campaña</span>
+          <input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            className="w-40 rounded-xl bg-surface px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:bg-white focus:ring-primary/20"
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-[14px] text-ink">Objetivo de facturación</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-ink-muted">U$S</span>
+            <input
+              type="number"
+              value={objetivo}
+              onChange={(e) => setObjetivo(Number(e.target.value))}
+              className="w-32 rounded-xl bg-surface px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:bg-white focus:ring-primary/20"
+            />
+          </div>
+        </label>
+        <p className="text-[12px] text-ink-muted">
+          Si el objetivo queda en 0, el panel usa el potencial total de la cartera como meta.
+        </p>
+      </div>
+
       <p className="text-[13px] text-ink-muted">
         Costo por hectárea de cada cultivo. Lo fija el supervisor y se usa para calcular el valor
         potencial de cada cliente.

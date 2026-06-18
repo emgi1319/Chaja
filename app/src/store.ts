@@ -10,6 +10,7 @@ import {
   storeUser,
 } from "./lib/api";
 import { seedDemo } from "./lib/seed";
+import { loadParametros } from "./lib/parametros";
 
 type AppState = {
   user: User | null;
@@ -42,6 +43,7 @@ export const useApp = create<AppState>((set, get) => ({
     seedDemo();
     if (!LOCAL_MODE && readToken()) {
       await pullAll();
+      await loadParametros();
     }
     const catalogo = await loadCatalog();
     set({ catalogo, dataVersion: get().dataVersion + 1 });

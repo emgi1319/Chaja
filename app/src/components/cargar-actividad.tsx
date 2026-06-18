@@ -10,6 +10,7 @@ import {
   type NotaCampo,
 } from "../types";
 import { formatUsd } from "../lib/valor-cliente";
+import { getNombreCampania } from "../lib/parametros";
 
 const GRUPOS: { grupo: string; estados: EstadoProceso[] }[] = [
   { grupo: "Prospección", estados: ["inicio_contacto", "completar_datos", "agenda_visita"] },
@@ -146,7 +147,8 @@ export function CargarActividad({ onSaved }: { onSaved?: () => void }) {
   return (
     <div className="space-y-4">
       <p className="text-[13px] text-ink-muted">
-        {productor?.razonSocial} · Vendedor: {productor?.vendedor || "—"} · Campaña 2025/26
+        {productor?.razonSocial} · Vendedor: {productor?.vendedor || "—"} · Campaña{" "}
+        {getNombreCampania()}
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">

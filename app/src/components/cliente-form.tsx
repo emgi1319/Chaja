@@ -7,6 +7,7 @@ import { CULTIVOS, type Cultivo, type Productor } from "../types";
 import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { useApp } from "../store";
 import { DEMO_VENDEDORES } from "../lib/demo-data";
+import { getNombreCampania } from "../lib/parametros";
 
 type CultivoDraft = { id: string; cultivo: string; superficieHa: string };
 
@@ -28,7 +29,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [vendedor, setVendedor] = useState(DEMO_VENDEDORES[0]?.nombre ?? "");
-  const [campania, setCampania] = useState("2025/26");
+  const [campania, setCampania] = useState(getNombreCampania());
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
   const [saving, setSaving] = useState(false);
 
@@ -73,7 +74,10 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
         <Dropdown
           label="Campaña"
           value={campania}
-          options={["2025/26", "2024/25"].map((c) => ({ value: c, label: c }))}
+          options={Array.from(new Set([getNombreCampania(), "2025/26", "2024/25"])).map((c) => ({
+            value: c,
+            label: c,
+          }))}
           onChange={setCampania}
         />
       </div>

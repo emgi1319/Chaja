@@ -185,6 +185,24 @@ export async function saveProducto(p: Producto): Promise<void> {
   }
 }
 
+export async function fetchParametros(): Promise<Record<string, unknown>> {
+  if (!API_BASE) return {};
+  try {
+    return await request<Record<string, unknown>>("/parametros");
+  } catch {
+    return {};
+  }
+}
+
+export async function pushParametro(clave: string, valor: unknown): Promise<void> {
+  if (!API_BASE) return;
+  try {
+    await request("/parametros", { method: "POST", body: JSON.stringify({ clave, valor }) });
+  } catch {
+    // queda en cache local hasta resincronizar
+  }
+}
+
 export function readUser(): User | null {
   return cacheGet<User>(USER_KEY);
 }
