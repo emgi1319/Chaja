@@ -6,6 +6,7 @@ import { newId } from "../lib/db";
 import { CULTIVOS, type Cultivo, type Productor } from "../types";
 import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { useApp } from "../store";
+import { DEMO_VENDEDORES } from "../lib/demo-data";
 
 type CultivoDraft = { id: string; cultivo: string; superficieHa: string };
 
@@ -26,6 +27,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [localidad, setLocalidad] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
+  const [vendedor, setVendedor] = useState(DEMO_VENDEDORES[0]?.nombre ?? "");
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
   const [saving, setSaving] = useState(false);
 
@@ -39,6 +41,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
     const prod: Productor = {
       id: newId(),
       razonSocial: razonSocial.trim(),
+      vendedor,
       localidad,
       telefono,
       email,
@@ -59,6 +62,12 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
         <Field label="Localidad" value={localidad} onChange={setLocalidad} />
         <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
         <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
+        <Dropdown
+          label="Vendedor asignado"
+          value={vendedor}
+          options={DEMO_VENDEDORES.map((v) => ({ value: v.nombre, label: v.nombre }))}
+          onChange={setVendedor}
+        />
       </div>
 
       <div className="space-y-3">

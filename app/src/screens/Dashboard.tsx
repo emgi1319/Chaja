@@ -21,6 +21,7 @@ import {
   UserPlus,
   Calculator,
   Sliders,
+  Bird,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos } from "../lib/api";
@@ -649,7 +650,9 @@ function Clientes() {
         </button>
       </div>
 
-      <TableShell head={["Cliente", "Potencial", "Facturado", "Oportunidad", "% captura"]}>
+      <TableShell
+        head={["Cliente", "Vendedor", "Ha", "Potencial", "Facturado", "Oportunidad", "% captura"]}
+      >
         {rows.map((r) => (
           <tr
             key={r.productor.id}
@@ -660,6 +663,8 @@ function Clientes() {
               <p className="font-medium text-ink">{r.productor.razonSocial}</p>
               <p className="text-[11px] text-ink-muted">{r.productor.localidad || "—"}</p>
             </td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.productor.vendedor || "—"}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.hectareas}</td>
             <td className="px-4 py-3 text-right font-semibold text-accent">{formatUsd(r.potencial)}</td>
             <td className="px-4 py-3 text-right text-ink-soft">{formatUsd(r.facturado)}</td>
             <td className="px-4 py-3 text-right text-amber">{formatUsd(r.oportunidad)}</td>
@@ -942,10 +947,10 @@ export function Dashboard() {
     <div className="flex h-full bg-surface">
       <aside className="flex w-16 shrink-0 flex-col bg-panel text-white md:w-60">
         <div className="flex items-center gap-2 px-4 py-5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 font-display text-[18px] font-bold">
-            C
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+            <Bird size={20} strokeWidth={2} />
           </div>
-          <span className="hidden font-display text-[18px] font-bold md:inline">CHAJÁ</span>
+          <span className="hidden font-display text-[18px] font-bold tracking-wide md:inline">CHAJÁ</span>
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-2">

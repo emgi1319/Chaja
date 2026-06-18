@@ -70,6 +70,7 @@ export interface UnidadProductiva {
 
 export interface Productor extends Entity {
   razonSocial: string;
+  vendedor?: string;
   cuitRut?: string;
   direccion?: string;
   localidad?: string;

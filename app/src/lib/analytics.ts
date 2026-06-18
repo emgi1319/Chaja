@@ -102,6 +102,7 @@ export interface ProductorRow {
   facturado: number;
   oportunidad: number;
   captura: number;
+  hectareas: number;
 }
 
 export function productoresRows(): ProductorRow[] {
@@ -110,12 +111,17 @@ export function productoresRows(): ProductorRow[] {
     .map((p) => {
       const potencial = valorClienteTotal(p);
       const facturado = facturadoCliente(p);
+      const hectareas = p.unidades.reduce(
+        (a, u) => a + u.cultivos.reduce((ac, c) => ac + (c.superficieHa || 0), 0),
+        0,
+      );
       return {
         productor: p,
         potencial,
         facturado,
         oportunidad: potencial - facturado,
         captura: potencial > 0 ? facturado / potencial : 0,
+        hectareas,
       };
     })
     .sort((a, b) => b.potencial - a.potencial);

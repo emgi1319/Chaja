@@ -48,7 +48,7 @@ foreach ($productos as $i => $p) {
 
 $productores = [
     [
-        'id' => 'p1', 'razonSocial' => 'Estancia La Esperanza S.A.', 'localidad' => 'Pergamino',
+        'id' => 'p1', 'razonSocial' => 'Estancia La Esperanza S.A.', 'vendedor' => 'Martín Suárez', 'localidad' => 'Pergamino',
         'telefono' => '+54 2477 412345', 'email' => 'compras@laesperanza.com.ar', 'contactos' => [],
         'unidades' => [[
             'id' => 'p1-u1',
@@ -60,7 +60,7 @@ $productores = [
         ]],
     ],
     [
-        'id' => 'p2', 'razonSocial' => 'Agropecuaria Don Alfredo', 'localidad' => 'Venado Tuerto',
+        'id' => 'p2', 'razonSocial' => 'Agropecuaria Don Alfredo', 'vendedor' => 'Lucía Fernández', 'localidad' => 'Venado Tuerto',
         'celular' => '+54 9 3462 540321', 'contactos' => [],
         'unidades' => [[
             'id' => 'p2-u1',
