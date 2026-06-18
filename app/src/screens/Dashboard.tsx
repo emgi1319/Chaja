@@ -23,23 +23,26 @@ import {
   Sliders,
   Bird,
   ClipboardCheck,
+  Eye,
 } from "lucide-react";
 import { useApp } from "../store";
-import { notasCampo, operaciones, pendingTotal, productores, referidos } from "../lib/api";
+import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
 import { newId } from "../lib/db";
-import { Dropdown } from "../components/ui";
+import { Dropdown, Field, PrimaryButton } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import {
   CULTIVOS,
   ESTADOS_PROCESO,
+  ESTADOS_REFERIDO,
   ESTADO_PROCESO_LABEL,
   ESTADO_OPERACION_LABEL,
   type Cultivo,
   type EstadoOperacion,
   type EstadoProceso,
   type NotaCampo,
+  type Referido,
 } from "../types";
 import {
   productoresRows,
@@ -203,9 +206,133 @@ function Operaciones() {
   );
 }
 
+const CATEGORIAS = [
+  "Semilla",
+  "Herbicida",
+  "Fungicida",
+  "Insecticida",
+  "Fertilizante",
+  "Coadyuvante",
+  "Inoculante",
+  "Curasemilla",
+  "Otros",
+];
+
+function numv(s: string): number {
+  const n = parseFloat(s.replace(",", "."));
+  return isNaN(n) ? 0 : n;
+}
+
+function ReferidoForm({ onSaved }: { onSaved: () => void }) {
+  const user = useApp((s) => s.user);
+  const [nombre, setNombre] = useState("");
+  const [referidor, setReferidor] = useState("");
+  const [email, setEmail] = useState("");
+  const [movil, setMovil] = useState("");
+  const [proceso, setProceso] = useState<string>("envie_email");
+  const [observaciones, setObservaciones] = useState("");
+  const [hectareas, setHectareas] = useState("");
+  const [saving, setSaving] = useState(false);
+  const guardar = async () => {
+    if (!nombre.trim()) return;
+    setSaving(true);
+    await referidos.save({
+      id: newId(),
+      nombre: nombre.trim(),
+      referidor,
+      email,
+      movil,
+      proceso: proceso as Referido["proceso"],
+      observaciones,
+      hectareas: numv(hectareas),
+      creadoPor: user?.nombre,
+      updatedAt: Date.now(),
+    });
+    setSaving(false);
+    onSaved();
+  };
+  return (
+    <div className="space-y-3">
+      <Field label="Nombre y apellido" value={nombre} onChange={setNombre} />
+      <Field label="Referidor" value={referidor} onChange={setReferidor} />
+      <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
+      <Field label="Móvil" value={movil} onChange={setMovil} inputMode="tel" />
+      <Dropdown
+        label="Proceso"
+        value={proceso}
+        options={ESTADOS_REFERIDO.map((e) => ({ value: e as string, label: REF_LABEL[e] ?? e }))}
+        onChange={setProceso}
+      />
+      <Field label="Hectáreas" value={hectareas} onChange={setHectareas} inputMode="decimal" />
+      <label className="block space-y-1.5">
+        <span className="label">Observaciones</span>
+        <textarea
+          value={observaciones}
+          onChange={(e) => setObservaciones(e.target.value)}
+          rows={2}
+          className="field"
+        />
+      </label>
+      <PrimaryButton disabled={saving || !nombre.trim()} onClick={guardar}>
+        {saving ? "Guardando…" : "Guardar referido"}
+      </PrimaryButton>
+    </div>
+  );
+}
+
+function ProductoForm({ onSaved }: { onSaved: () => void }) {
+  const refresh = useApp((s) => s.refresh);
+  const [codigo, setCodigo] = useState("");
+  const [categoria, setCategoria] = useState<string>("Semilla");
+  const [nombre, setNombre] = useState("");
+  const [empresa, setEmpresa] = useState("");
+  const [presentacion, setPresentacion] = useState("");
+  const [precio, setPrecio] = useState("");
+  const [stock, setStock] = useState("");
+  const [saving, setSaving] = useState(false);
+  const guardar = async () => {
+    if (!nombre.trim()) return;
+    setSaving(true);
+    await saveProducto({
+      id: newId(),
+      codigo,
+      categoria,
+      nombre: nombre.trim(),
+      empresa,
+      presentacion,
+      precio1: numv(precio),
+      stock: numv(stock),
+    });
+    await refresh();
+    setSaving(false);
+    onSaved();
+  };
+  return (
+    <div className="space-y-3">
+      <Field label="Código" value={codigo} onChange={setCodigo} />
+      <Dropdown
+        label="Categoría"
+        value={categoria}
+        options={CATEGORIAS.map((c) => ({ value: c, label: c }))}
+        onChange={setCategoria}
+      />
+      <Field label="Nombre" value={nombre} onChange={setNombre} />
+      <Field label="Marca" value={empresa} onChange={setEmpresa} />
+      <Field label="Presentación" value={presentacion} onChange={setPresentacion} />
+      <Field label="Precio (U$S)" value={precio} onChange={setPrecio} inputMode="decimal" />
+      <Field label="Stock" value={stock} onChange={setStock} inputMode="numeric" />
+      <PrimaryButton disabled={saving || !nombre.trim()} onClick={guardar}>
+        {saving ? "Guardando…" : "Guardar producto"}
+      </PrimaryButton>
+    </div>
+  );
+}
+
 function Referidos() {
-  const rs = referidos.list();
-  const s = referidosStats();
+  const [open, setOpen] = useState(false);
+  const [version, setVersion] = useState(0);
+  const rs = useMemo(() => referidos.list(), [version]);
+  const s = useMemo(() => referidosStats(), [version]);
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -213,6 +340,14 @@ function Referidos() {
         <Kpi icon={Filter} label="En gestión" value={String(s.enGestion)} />
         <Kpi icon={UserCheck} label="Ventas" value={String(s.ventas)} tone="accent" />
         <Kpi icon={TrendingUp} label="Conversión" value={formatPct(s.conversion)} tone="accent" />
+      </div>
+      <div className="flex justify-end">
+        <button
+          onClick={() => setOpen(true)}
+          className="press flex items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+        >
+          <Plus size={17} /> Nuevo referido
+        </button>
       </div>
       <TableShell head={["Referido", "Referidor", "Proceso", "Ha"]}>
         {rs.map((r) => (
@@ -231,6 +366,14 @@ function Referidos() {
           </tr>
         ))}
       </TableShell>
+      <Drawer open={open} onClose={() => setOpen(false)} title="Nuevo referido">
+        <ReferidoForm
+          onSaved={() => {
+            setOpen(false);
+            setVersion((v) => v + 1);
+          }}
+        />
+      </Drawer>
     </div>
   );
 }
@@ -723,8 +866,18 @@ function Equipo() {
 
 function Productos() {
   const catalogo = useApp((s) => s.catalogo);
+  const [open, setOpen] = useState(false);
   return (
-    <TableShell head={["Producto", "Categoría", "Marca", "Presentación", "Precio", "Stock"]}>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setOpen(true)}
+          className="press flex items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+        >
+          <Plus size={17} /> Nuevo producto
+        </button>
+      </div>
+      <TableShell head={["Producto", "Categoría", "Marca", "Presentación", "Precio", "Stock"]}>
       {catalogo.map((p) => (
         <tr key={p.id} className="border-t border-line transition-colors hover:bg-surface">
           <td className="px-4 py-3">
@@ -748,7 +901,11 @@ function Productos() {
           <td className="px-4 py-3 text-right text-ink-soft">{p.stock ?? "—"}</td>
         </tr>
       ))}
-    </TableShell>
+      </TableShell>
+      <Drawer open={open} onClose={() => setOpen(false)} title="Nuevo producto">
+        <ProductoForm onSaved={() => setOpen(false)} />
+      </Drawer>
+    </div>
   );
 }
 
@@ -1007,11 +1164,16 @@ export function Dashboard() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-line bg-white px-6 py-4">
           <h1 className="font-display text-[20px] font-semibold text-ink">{SECTION_TITLE[section]}</h1>
-          {pend > 0 && (
-            <span className="rounded-pill bg-primary-tint px-3 py-1 text-[12px] font-medium text-primary-dark">
-              {pend} sin sincronizar
+          <div className="flex items-center gap-3">
+            {pend > 0 && (
+              <span className="rounded-pill bg-primary-tint px-3 py-1 text-[12px] font-medium text-primary-dark">
+                {pend} sin sincronizar
+              </span>
+            )}
+            <span className="flex items-center gap-1.5 rounded-pill bg-primary-tint px-3 py-1.5 text-[12px] font-medium text-primary-dark">
+              <Eye size={14} /> Vista del dueño
             </span>
-          )}
+          </div>
         </header>
         <main key={`${section}-${dataVersion}`} className="fade-in flex-1 overflow-y-auto p-6">
           {section === "inicio" && <Inicio />}

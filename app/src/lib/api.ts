@@ -174,6 +174,17 @@ export function saveCatalogLocal(productos: Producto[]): void {
   localStorage.setItem(CATALOG_KEY, JSON.stringify(productos));
 }
 
+export async function saveProducto(p: Producto): Promise<void> {
+  const actual = (cacheGet<Producto[]>(CATALOG_KEY) ?? []).filter((x) => x.id !== p.id);
+  saveCatalogLocal([...actual, p]);
+  if (!API_BASE) return;
+  try {
+    await request("/productos", { method: "POST", body: JSON.stringify(p) });
+  } catch {
+    // queda en cache local hasta resincronizar
+  }
+}
+
 export function readUser(): User | null {
   return cacheGet<User>(USER_KEY);
 }
