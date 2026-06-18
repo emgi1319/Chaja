@@ -11,7 +11,10 @@ require __DIR__ . '/db.php';
 
 $pdo = db_connect($config);
 
-$schema = (string) file_get_contents(__DIR__ . '/schema.sql');
+$driver = $config['driver'] ?? 'mysql';
+$schema = (string) file_get_contents(
+    __DIR__ . ($driver === 'sqlite' ? '/schema.sqlite.sql' : '/schema.sql'),
+);
 foreach (array_filter(array_map('trim', explode(';', $schema))) as $stmt) {
     $pdo->exec($stmt);
 }

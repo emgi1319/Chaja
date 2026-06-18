@@ -98,7 +98,7 @@ if ($name === 'parametros') {
     }
     if ($method === 'POST') {
         $b = body();
-        $pdo->prepare('INSERT INTO parametros (clave, valor, updated_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor), updated_at = VALUES(updated_at)')
+        $pdo->prepare('REPLACE INTO parametros (clave, valor, updated_at) VALUES (?, ?, ?)')
             ->execute([(string) $b['clave'], json_encode($b['valor'] ?? null, JSON_UNESCAPED_UNICODE), (int) round(microtime(true) * 1000)]);
         out(['ok' => true]);
     }
@@ -145,11 +145,7 @@ if ($method === 'POST') {
     }
     $names = array_keys($values);
     $placeholders = implode(',', array_fill(0, count($names), '?'));
-    $updates = implode(',', array_map(
-        fn ($c) => "{$c} = VALUES({$c})",
-        array_filter($names, fn ($c) => $c !== 'id' && $c !== 'owner'),
-    ));
-    $sql = "INSERT INTO {$table} (" . implode(',', $names) . ") VALUES ({$placeholders}) ON DUPLICATE KEY UPDATE {$updates}";
+    $sql = "REPLACE INTO {$table} (" . implode(',', $names) . ") VALUES ({$placeholders})";
     $pdo->prepare($sql)->execute(array_values($values));
     out(['ok' => true]);
 }

@@ -14,8 +14,7 @@ $now = (int) round(microtime(true) * 1000);
 function upsertUser(PDO $pdo, string $id, string $nombre, string $usuario, string $pass, string $rol): void
 {
     $pdo->prepare(
-        'INSERT INTO users (id, nombre, usuario, password_hash, rol) VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE nombre = VALUES(nombre), rol = VALUES(rol)',
+        'REPLACE INTO users (id, nombre, usuario, password_hash, rol) VALUES (?, ?, ?, ?, ?)',
     )->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol]);
 }
 
@@ -33,8 +32,7 @@ $productos = [
     ['INO-SOJ', 'Inoculante', 'Inoculante para soja', 'Rizobacter', 'Bradyrhizobium', 'Dosis 50 ha', 180, 172, 165, 100],
 ];
 $stmtProd = $pdo->prepare(
-    'INSERT INTO productos (id, codigo, categoria, nombre, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = VALUES(updated_at)',
+    'REPLACE INTO productos (id, codigo, categoria, nombre, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
 foreach ($productos as $i => $p) {
     $id = 'prod-' . ($i + 1);
@@ -83,8 +81,7 @@ $productores = [
     ],
 ];
 $stmtPdor = $pdo->prepare(
-    'INSERT INTO productores (id, owner, razon_social, localidad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = VALUES(updated_at)',
+    'REPLACE INTO productores (id, owner, razon_social, localidad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
 foreach ($productores as $p) {
     $p['updatedAt'] = $now;
@@ -97,9 +94,8 @@ $operaciones = [
     ['op-3', 'p2', 'Agropecuaria Don Alfredo', 'Soja', 'Inoculante', 720, 'en_proceso', 'abierta'],
 ];
 $stmtOp = $pdo->prepare(
-    'INSERT INTO operaciones (id, owner, productor_id, cultivo, producto, etapa, estado, valor_potencial, data, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = VALUES(updated_at)',
+    'REPLACE INTO operaciones (id, owner, productor_id, cultivo, producto, etapa, estado, valor_potencial, data, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 );
 foreach ($operaciones as $o) {
     $data = [
@@ -118,8 +114,7 @@ $referidos = [
     ['ref-5', 'Pablo Sosa', 'Diego Romero', 'no_venta', 0, 'Ya trabaja con otro proveedor'],
 ];
 $stmtRef = $pdo->prepare(
-    'INSERT INTO referidos (id, owner, nombre, proceso, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = VALUES(updated_at)',
+    'REPLACE INTO referidos (id, owner, nombre, proceso, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
 foreach ($referidos as $r) {
     $data = [
@@ -135,8 +130,7 @@ $notas = [
     ['nota-3', 'p2', 'Agropecuaria Don Alfredo', 'Soja', 'visita_campo', 'Recorrida de lote, evaluación de malezas.'],
 ];
 $stmtNota = $pdo->prepare(
-    'INSERT INTO actividades (id, owner, productor_id, actividad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = VALUES(updated_at)',
+    'REPLACE INTO actividades (id, owner, productor_id, actividad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
 foreach ($notas as $i => $n) {
     $data = [
