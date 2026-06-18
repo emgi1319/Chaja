@@ -24,6 +24,7 @@ import {
   Bird,
   ClipboardCheck,
   Eye,
+  Trash2,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
@@ -233,12 +234,21 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
   const [movil, setMovil] = useState("");
   const [proceso, setProceso] = useState<string>("envie_email");
   const [observaciones, setObservaciones] = useState("");
-  const [hectareas, setHectareas] = useState("");
+  const [cultivos, setCultivos] = useState<{ id: string; cultivo: string; ha: string }[]>([
+    { id: newId(), cultivo: "Maíz", ha: "" },
+  ]);
   const [estadoCivil, setEstadoCivil] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [hobbys, setHobbys] = useState("");
   const [deportes, setDeportes] = useState("");
   const [saving, setSaving] = useState(false);
+  const haTotal = cultivos.reduce((a, c) => a + numv(c.ha), 0);
+  const valorPotencial = cultivos.reduce(
+    (a, c) => a + valorCultivo({ id: c.id, cultivo: c.cultivo, superficieHa: numv(c.ha), facturado: 0 }),
+    0,
+  );
+  const patchCultivo = (id: string, p: Partial<{ cultivo: string; ha: string }>) =>
+    setCultivos((cs) => cs.map((c) => (c.id === id ? { ...c, ...p } : c)));
   const guardar = async () => {
     if (!nombre.trim()) return;
     setSaving(true);
@@ -250,7 +260,7 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
       movil,
       proceso: proceso as Referido["proceso"],
       observaciones,
-      hectareas: numv(hectareas),
+      hectareas: haTotal,
       estadoCivil,
       fechaNacimiento,
       hobbys,
@@ -283,7 +293,53 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
         options={ESTADOS_REFERIDO.map((e) => ({ value: e as string, label: REF_LABEL[e] ?? e }))}
         onChange={setProceso}
       />
-      <Field label="Hectáreas" value={hectareas} onChange={setHectareas} inputMode="decimal" />
+      <div className="space-y-2 rounded-2xl border border-line p-3">
+        <div className="flex items-center justify-between">
+          <span className="label">Cultivos</span>
+          <button
+            type="button"
+            onClick={() => setCultivos((cs) => [...cs, { id: newId(), cultivo: "Maíz", ha: "" }])}
+            className="flex items-center gap-1 text-[13px] font-semibold text-primary"
+          >
+            <Plus size={15} /> Agregar
+          </button>
+        </div>
+        {cultivos.map((c) => (
+          <div key={c.id} className="grid grid-cols-12 items-end gap-2">
+            <div className="col-span-6">
+              <Dropdown
+                value={c.cultivo}
+                options={CULTIVOS.map((x) => ({ value: x as string, label: x }))}
+                onChange={(v) => patchCultivo(c.id, { cultivo: v })}
+              />
+            </div>
+            <input
+              value={c.ha}
+              onChange={(e) => patchCultivo(c.id, { ha: e.target.value })}
+              placeholder="Ha"
+              inputMode="decimal"
+              className="col-span-3 rounded-xl bg-surface px-2 py-2.5 text-right text-[13px] outline-none"
+            />
+            <span className="col-span-2 text-right text-[12px] font-semibold text-accent">
+              {formatUsd(
+                valorCultivo({ id: c.id, cultivo: c.cultivo, superficieHa: numv(c.ha), facturado: 0 }),
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCultivos((cs) => (cs.length > 1 ? cs.filter((x) => x.id !== c.id) : cs))}
+              className="col-span-1 p-1 text-ink-muted active:opacity-60"
+              aria-label="Quitar"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+        <div className="flex items-center justify-between border-t border-line pt-2 text-[13px]">
+          <span className="text-ink-muted">{haTotal} ha · valor potencial</span>
+          <span className="font-semibold text-accent">{formatUsd(valorPotencial)}</span>
+        </div>
+      </div>
       <Field label="Hobbys" value={hobbys} onChange={setHobbys} />
       <Field label="Deportes" value={deportes} onChange={setDeportes} />
       <label className="block space-y-1.5">
