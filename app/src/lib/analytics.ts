@@ -223,3 +223,43 @@ export function referidosStats() {
     conversion: cerrados > 0 ? ventas / cerrados : 0,
   };
 }
+
+export interface CampaignTotals {
+  clientes: number;
+  facturado: number;
+  potencial: number;
+  oportunidad: number;
+  captura: number;
+}
+
+export function campaignTotals(): CampaignTotals {
+  const rows = productoresRows();
+  const facturado = rows.reduce((a, r) => a + r.facturado, 0);
+  const potencial = rows.reduce((a, r) => a + r.potencial, 0);
+  const oportunidad = rows.reduce((a, r) => a + r.oportunidad, 0);
+  return {
+    clientes: rows.length,
+    facturado,
+    potencial,
+    oportunidad,
+    captura: potencial > 0 ? facturado / potencial : 0,
+  };
+}
+
+export function alertasCartera(): string[] {
+  const rows = productoresRows().filter((r) => r.potencial > 0);
+  const out: string[] = [];
+  const porOportunidad = [...rows].sort((a, b) => b.oportunidad - a.oportunidad)[0];
+  if (porOportunidad) {
+    out.push(
+      `${porOportunidad.productor.razonSocial} tiene ${formatUsd(porOportunidad.oportunidad)} de oportunidad sin capturar`,
+    );
+  }
+  const porCaptura = [...rows].sort((a, b) => a.captura - b.captura)[0];
+  if (porCaptura) {
+    out.push(
+      `${porCaptura.productor.razonSocial} está en ${formatPct(porCaptura.captura)} de captura — conviene revisar`,
+    );
+  }
+  return out;
+}

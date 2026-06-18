@@ -9,7 +9,9 @@ import {
   Search,
   Target,
   TrendingUp,
-  ClipboardList,
+  DollarSign,
+  Percent,
+  Clock,
   ArrowLeft,
   Plus,
   MapPin,
@@ -33,16 +35,15 @@ import {
   type NotaCampo,
 } from "../types";
 import {
-  carteraKpis,
-  embudo,
   productoresRows,
   capturaPorCultivo,
-  resumenCartera,
   formatPct,
   seguimientoClientes,
   seguimientoStats,
   operacionesStats,
   referidosStats,
+  campaignTotals,
+  alertasCartera,
 } from "../lib/analytics";
 import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { DEMO_VENDEDORES } from "../lib/demo-data";
@@ -288,64 +289,80 @@ function TableShell({ head, children }: { head: string[]; children: ReactNode })
 }
 
 function Inicio() {
-  const k = carteraKpis();
-  const rows = productoresRows().slice(0, 6);
-  const funnel = embudo();
-  const maxFunnel = Math.max(1, ...funnel.map((f) => f.count));
-  const analisis = resumenCartera();
+  const t = campaignTotals();
+  const objetivo = t.potencial;
+  const avance = objetivo > 0 ? t.facturado / objetivo : 0;
+  const alertas = alertasCartera();
+  const maxLogrado = Math.max(1, ...DEMO_VENDEDORES.map((v) => v.logrado));
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi icon={Users} label="Clientes" value={String(k.productores)} />
-        <Kpi icon={Target} label="Potencial de cartera" value={formatUsd(k.potencial)} />
-        <Kpi icon={TrendingUp} label="Oportunidad" value={formatUsd(k.oportunidad)} tone="amber" />
-        <Kpi icon={ClipboardList} label="Actividades" value={String(k.notas)} />
+      <div>
+        <h2 className="font-display text-[18px] font-semibold text-ink">Panel de la campaña 2025/26</h2>
+        <p className="text-[13px] text-ink-muted">Resumen de tu operación comercial en tiempo real.</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card">
-          <h2 className="font-display text-[15px] font-semibold text-ink">Top clientes por potencial</h2>
-          <table className="mt-3 w-full text-[13px]">
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.productor.id} className="border-t border-line">
-                  <td className="py-2">
-                    <p className="font-medium text-ink">{r.productor.razonSocial}</p>
-                    <p className="text-[11px] text-ink-muted">{r.productor.localidad || "—"}</p>
-                  </td>
-                  <td className="py-2 text-right font-semibold text-accent">{formatUsd(r.potencial)}</td>
-                  <td className="py-2 pl-3 text-right">
-                    <CapturaBadge pct={r.captura} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="card">
-          <h2 className="font-display text-[15px] font-semibold text-ink">Embudo del proceso</h2>
-          <div className="mt-3 space-y-2.5">
-            {funnel.map((f) => (
-              <div key={f.estado}>
-                <div className="mb-1 flex items-center justify-between text-[12px]">
-                  <span className="text-ink-soft">{f.label}</span>
-                  <span className="text-ink-muted">{f.count}</span>
-                </div>
-                <Bar pct={(f.count / maxFunnel) * 100} />
-              </div>
-            ))}
-          </div>
-        </section>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi icon={DollarSign} label="Facturado campaña" value={formatUsd(t.facturado)} />
+        <Kpi icon={TrendingUp} label="Oportunidad detectada" value={formatUsd(t.oportunidad)} tone="amber" />
+        <Kpi icon={Percent} label="% capturado" value={formatPct(t.captura)} />
+        <Kpi icon={Users} label="Clientes activos" value={String(t.clientes)} />
       </div>
 
       <section className="card">
-        <h2 className="font-display text-[15px] font-semibold text-ink">Análisis de la cartera</h2>
-        <ul className="mt-3 space-y-2">
-          {analisis.map((line, i) => (
-            <li key={i} className="flex gap-2 text-[13px] text-ink-soft">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-[15px] font-semibold text-ink">Objetivo de campaña</h2>
+          <span className="text-[13px] text-ink-muted">
+            {formatUsd(t.facturado)} / {formatUsd(objetivo)}
+          </span>
+        </div>
+        <div className="mt-3">
+          <Bar pct={avance * 100} tone="accent" />
+        </div>
+        <p className="mt-1.5 text-[12px] text-ink-muted">{formatPct(avance)} del objetivo alcanzado</p>
+      </section>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Ranking de vendedores</h2>
+        <div className="mt-3 space-y-3">
+          {[...DEMO_VENDEDORES]
+            .sort((a, b) => b.logrado - a.logrado)
+            .map((v) => {
+              const pct = v.logrado / v.objetivo;
+              const ini = v.nombre
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase();
+              return (
+                <div key={v.nombre} className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
+                    {ini}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="font-medium text-ink">{v.nombre}</span>
+                      <span className="text-ink-muted">
+                        {formatUsd(v.logrado)} · {formatPct(pct)}
+                      </span>
+                    </div>
+                    <div className="mt-1">
+                      <Bar pct={(v.logrado / maxLogrado) * 100} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </section>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Alertas y próximas acciones</h2>
+        <ul className="mt-3 space-y-2.5">
+          {alertas.map((line, i) => (
+            <li key={i} className="flex items-start gap-2 text-[13px] text-ink-soft">
+              <Clock size={15} className="mt-0.5 shrink-0 text-amber" />
               <span>{line}</span>
             </li>
           ))}
