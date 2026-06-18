@@ -100,16 +100,21 @@ foreach ($operaciones as $o) {
 }
 
 $referidos = [
-    ['ref-1', 'Juan Pérez', 'Nicolás Díaz', 'venta'],
-    ['ref-2', 'Marta Quiroga', 'Oscar Juliá', 'presupuesto'],
-    ['ref-3', 'Sergio Benítez', 'Alfredo Sosa', 'visita'],
+    ['ref-1', 'Juan Pérez', 'Nicolás Díaz', 'en_proceso', 600, 'Recontactar la semana próxima'],
+    ['ref-2', 'Laura Méndez', 'Juan Pérez', 'presupuesto', 300, 'Presupuesto de semilla de soja enviado'],
+    ['ref-3', 'Sergio Díaz', 'Lucía Fernández', 'visita', 450, 'Visita al campo agendada para el 18/06'],
+    ['ref-4', 'Marta Quiroga', 'Nicolás Díaz', 'venta', 800, 'Cerró compra de fertilizante'],
+    ['ref-5', 'Pablo Sosa', 'Diego Romero', 'no_venta', 0, 'Ya trabaja con otro proveedor'],
 ];
 $stmtRef = $pdo->prepare(
     'INSERT INTO referidos (id, owner, nombre, proceso, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = VALUES(updated_at)',
 );
 foreach ($referidos as $r) {
-    $data = ['id' => $r[0], 'nombre' => $r[1], 'referidor' => $r[2], 'proceso' => $r[3], 'updatedAt' => $now];
+    $data = [
+        'id' => $r[0], 'nombre' => $r[1], 'referidor' => $r[2], 'proceso' => $r[3],
+        'hectareas' => $r[4], 'observaciones' => $r[5], 'updatedAt' => $now,
+    ];
     $stmtRef->execute([$r[0], $owner, $r[1], $r[3], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
 }
 

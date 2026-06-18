@@ -16,6 +16,7 @@ export interface Entity {
 export interface Producto {
   id: string;
   codigo?: string;
+  categoria?: string;
   nombre: string;
   empresa?: string;
   principioActivo?: string;
@@ -175,6 +176,7 @@ export interface Referido extends Entity {
   estadoCivil?: string;
   edadAprox?: string;
   observaciones?: string;
+  hectareas?: number;
   creadoPor?: string;
 }
 

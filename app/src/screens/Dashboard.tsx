@@ -209,17 +209,20 @@ function Referidos() {
         <Kpi icon={UserCheck} label="Ventas" value={String(s.ventas)} tone="accent" />
         <Kpi icon={TrendingUp} label="Conversión" value={formatPct(s.conversion)} tone="accent" />
       </div>
-      <TableShell head={["Referido", "Referidor", "Estado", "Contacto"]}>
+      <TableShell head={["Referido", "Referidor", "Proceso", "Ha"]}>
         {rs.map((r) => (
           <tr key={r.id} className="border-t border-line transition-colors hover:bg-surface">
-            <td className="px-4 py-3 font-medium text-ink">{r.nombre}</td>
+            <td className="px-4 py-3">
+              <p className="font-medium text-ink">{r.nombre}</p>
+              {r.observaciones && <p className="text-[11px] text-ink-muted">{r.observaciones}</p>}
+            </td>
             <td className="px-4 py-3 text-right text-ink-soft">{r.referidor || "—"}</td>
             <td className="px-4 py-3 text-right">
               <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[12px] font-medium text-primary-dark">
                 {REF_LABEL[r.proceso] ?? r.proceso}
               </span>
             </td>
-            <td className="px-4 py-3 text-right text-ink-soft">{r.movil || r.email || "—"}</td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.hectareas ?? "—"}</td>
           </tr>
         ))}
       </TableShell>
@@ -716,12 +719,21 @@ function Equipo() {
 function Productos() {
   const catalogo = useApp((s) => s.catalogo);
   return (
-    <TableShell head={["Producto", "Empresa", "Presentación", "Precio", "Stock"]}>
+    <TableShell head={["Producto", "Categoría", "Marca", "Presentación", "Precio", "Stock"]}>
       {catalogo.map((p) => (
         <tr key={p.id} className="border-t border-line transition-colors hover:bg-surface">
           <td className="px-4 py-3">
             <p className="font-medium text-ink">{p.nombre}</p>
-            <p className="text-[11px] text-ink-muted">{p.principioActivo || "—"}</p>
+            <p className="text-[11px] text-ink-muted">{p.codigo || p.principioActivo || "—"}</p>
+          </td>
+          <td className="px-4 py-3 text-right">
+            {p.categoria ? (
+              <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[12px] font-medium text-primary-dark">
+                {p.categoria}
+              </span>
+            ) : (
+              <span className="text-ink-muted">—</span>
+            )}
           </td>
           <td className="px-4 py-3 text-right text-ink-soft">{p.empresa || "—"}</td>
           <td className="px-4 py-3 text-right text-ink-soft">{p.presentacion || "—"}</td>
