@@ -19,6 +19,8 @@ import {
   Filter,
   Boxes,
   UserPlus,
+  Calculator,
+  Sliders,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos } from "../lib/api";
@@ -27,9 +29,11 @@ import { Dropdown } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import {
+  CULTIVOS,
   ESTADOS_PROCESO,
   ESTADO_PROCESO_LABEL,
   ESTADO_OPERACION_LABEL,
+  type Cultivo,
   type EstadoOperacion,
   type EstadoProceso,
   type NotaCampo,
@@ -45,7 +49,8 @@ import {
   campaignTotals,
   alertasCartera,
 } from "../lib/analytics";
-import { formatUsd, valorCultivo } from "../lib/valor-cliente";
+import { formatUsd, valorCultivo, facturadoCultivo, oportunidadCultivo } from "../lib/valor-cliente";
+import { getCostosHa, setCostosHa, costoHa } from "../lib/parametros";
 import { DEMO_VENDEDORES } from "../lib/demo-data";
 
 type Section =
@@ -56,6 +61,8 @@ type Section =
   | "referidos"
   | "equipo"
   | "productos"
+  | "valorcliente"
+  | "parametros"
   | "reportes";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
@@ -66,6 +73,8 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "referidos", label: "Referidos", icon: UserPlus },
   { key: "equipo", label: "Equipo", icon: UserCheck },
   { key: "productos", label: "Productos", icon: Package },
+  { key: "valorcliente", label: "Valor cliente", icon: Calculator },
+  { key: "parametros", label: "Parámetros", icon: Sliders },
   { key: "reportes", label: "Reportes", icon: BarChart3 },
 ];
 
@@ -77,6 +86,8 @@ const SECTION_TITLE: Record<Section, string> = {
   referidos: "Referidos",
   equipo: "Equipo de ventas",
   productos: "Productos",
+  valorcliente: "Valor cliente",
+  parametros: "Parámetros",
   reportes: "Reportes",
 };
 
@@ -764,6 +775,162 @@ function Reportes() {
   );
 }
 
+function Parametros() {
+  const [costos, setCostos] = useState<Record<string, number>>(getCostosHa());
+  const [saved, setSaved] = useState(false);
+  const guardar = () => {
+    setCostosHa(costos);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+  return (
+    <div className="max-w-lg space-y-4">
+      <p className="text-[13px] text-ink-muted">
+        Costo por hectárea de cada cultivo. Lo fija el supervisor y se usa para calcular el valor
+        potencial de cada cliente.
+      </p>
+      <div className="card divide-y divide-line py-1">
+        {CULTIVOS.map((c) => (
+          <div key={c} className="flex items-center justify-between py-2.5">
+            <span className="text-[14px] text-ink">{c}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-ink-muted">U$S/ha</span>
+              <input
+                type="number"
+                value={costos[c] ?? 0}
+                onChange={(e) => setCostos((s) => ({ ...s, [c]: Number(e.target.value) }))}
+                className="w-28 rounded-xl bg-surface px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:bg-white focus:ring-primary/20"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={guardar}
+        className="press rounded-2xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark"
+      >
+        {saved ? "Guardado" : "Guardar parámetros"}
+      </button>
+    </div>
+  );
+}
+
+function ValorClienteScreen() {
+  const lista = productores.list();
+  const [id, setId] = useState(lista[0]?.id ?? "");
+  const [rows, setRows] = useState<Cultivo[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const p = productores.get(id);
+    setRows(p ? p.unidades.flatMap((u) => u.cultivos).map((c) => ({ ...c })) : []);
+  }, [id]);
+
+  const potencial = rows.reduce((a, c) => a + valorCultivo(c), 0);
+  const facturado = rows.reduce((a, c) => a + facturadoCultivo(c), 0);
+  const oportunidad = potencial - facturado;
+  const captura = potencial > 0 ? facturado / potencial : 0;
+
+  const patch = (i: number, p: Partial<Cultivo>) =>
+    setRows((rs) => rs.map((c, n) => (n === i ? { ...c, ...p } : c)));
+
+  const guardar = async () => {
+    const productor = productores.get(id);
+    if (!productor) return;
+    setSaving(true);
+    await productores.save({
+      ...productor,
+      unidades: [{ id: productor.unidades[0]?.id ?? newId(), cultivos: rows }],
+      updatedAt: Date.now(),
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[13px] text-ink-muted">
+        Cargá las hectáreas por cultivo; el costo por ha viene de Parámetros y se calcula el
+        potencial y la oportunidad.
+      </p>
+      <div className="max-w-xs">
+        <Dropdown
+          value={id}
+          options={lista.map((p) => ({ value: p.id, label: p.razonSocial }))}
+          onChange={setId}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi icon={Target} label="Valor potencial" value={formatUsd(potencial)} tone="accent" />
+        <Kpi icon={DollarSign} label="Facturado" value={formatUsd(facturado)} />
+        <Kpi icon={TrendingUp} label="Oportunidad" value={formatUsd(oportunidad)} tone="amber" />
+        <Kpi icon={Percent} label="Capturado" value={formatPct(captura)} />
+      </div>
+
+      <TableShell
+        head={["Cultivo", "Hectáreas", "Costo/ha", "Valor potencial", "Facturado", "Oportunidad"]}
+      >
+        {rows.map((c, i) => (
+          <tr key={c.id} className="border-t border-line">
+            <td className="px-4 py-2">
+              <select
+                value={c.cultivo}
+                onChange={(e) => patch(i, { cultivo: e.target.value })}
+                className="rounded-lg bg-surface px-2 py-1.5 text-[13px] outline-none"
+              >
+                {CULTIVOS.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            </td>
+            <td className="px-4 py-2 text-right">
+              <input
+                type="number"
+                value={c.superficieHa || 0}
+                onChange={(e) => patch(i, { superficieHa: Number(e.target.value) })}
+                className="w-20 rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none"
+              />
+            </td>
+            <td className="px-4 py-2 text-right text-ink-muted">{formatUsd(costoHa(c.cultivo))}</td>
+            <td className="px-4 py-2 text-right font-semibold text-accent">
+              {formatUsd(valorCultivo(c))}
+            </td>
+            <td className="px-4 py-2 text-right">
+              <input
+                type="number"
+                value={c.facturado || 0}
+                onChange={(e) => patch(i, { facturado: Number(e.target.value) })}
+                className="w-24 rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none"
+              />
+            </td>
+            <td className="px-4 py-2 text-right text-amber">{formatUsd(oportunidadCultivo(c))}</td>
+          </tr>
+        ))}
+      </TableShell>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() =>
+            setRows((rs) => [...rs, { id: newId(), cultivo: "Maíz", superficieHa: 0, facturado: 0 }])
+          }
+          className="flex items-center gap-1 rounded-2xl border border-line bg-white px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          <Plus size={15} /> Agregar cultivo
+        </button>
+        <button
+          onClick={guardar}
+          disabled={saving || !id}
+          className="press rounded-2xl bg-primary px-5 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:bg-disabled"
+        >
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const user = useApp((s) => s.user)!;
   const logout = useApp((s) => s.logout);
@@ -832,6 +999,8 @@ export function Dashboard() {
           {section === "referidos" && <Referidos />}
           {section === "equipo" && <Equipo />}
           {section === "productos" && <Productos />}
+          {section === "valorcliente" && <ValorClienteScreen />}
+          {section === "parametros" && <Parametros />}
           {section === "reportes" && <Reportes />}
         </main>
       </div>

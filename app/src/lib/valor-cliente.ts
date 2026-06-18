@@ -1,35 +1,34 @@
-import type { Cultivo, InsumoLinea, Productor } from "../types";
+import type { Cultivo, Productor } from "../types";
+import { costoHa } from "./parametros";
 
-// Inversión de una línea de insumo: superficie del cultivo por dosis por hectárea
-// por precio unitario. Es la base del cálculo de potencial.
-export function totalLinea(superficieHa: number, l: InsumoLinea): number {
-  return superficieHa * l.unidadXHa * l.usdXUnidad;
-}
-
-export function diferenciaLinea(superficieHa: number, l: InsumoLinea): number {
-  return totalLinea(superficieHa, l) - (l.facturacionAnterior || 0);
-}
-
+// Valor potencial de un cultivo: hectáreas por el costo/ha del cultivo (parámetro
+// global). Es lo que ese productor invertiría en esa superficie.
 export function valorCultivo(c: Cultivo): number {
-  return c.insumos.reduce((acc, l) => acc + totalLinea(c.superficieHa, l), 0);
+  return (c.superficieHa || 0) * costoHa(c.cultivo);
 }
 
-export function diferenciaCultivo(c: Cultivo): number {
-  return c.insumos.reduce((acc, l) => acc + diferenciaLinea(c.superficieHa, l), 0);
+export function facturadoCultivo(c: Cultivo): number {
+  return c.facturado || 0;
+}
+
+export function oportunidadCultivo(c: Cultivo): number {
+  return valorCultivo(c) - facturadoCultivo(c);
+}
+
+function cultivosDe(p: Productor): Cultivo[] {
+  return p.unidades.flatMap((u) => u.cultivos);
 }
 
 export function valorClienteTotal(p: Productor): number {
-  return p.unidades.reduce(
-    (acc, u) => acc + u.cultivos.reduce((a, c) => a + valorCultivo(c), 0),
-    0,
-  );
+  return cultivosDe(p).reduce((acc, c) => acc + valorCultivo(c), 0);
+}
+
+export function facturadoCliente(p: Productor): number {
+  return cultivosDe(p).reduce((acc, c) => acc + facturadoCultivo(c), 0);
 }
 
 export function diferenciaTotal(p: Productor): number {
-  return p.unidades.reduce(
-    (acc, u) => acc + u.cultivos.reduce((a, c) => a + diferenciaCultivo(c), 0),
-    0,
-  );
+  return valorClienteTotal(p) - facturadoCliente(p);
 }
 
 const usd = new Intl.NumberFormat("es-AR", {

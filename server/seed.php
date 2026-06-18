@@ -53,13 +53,9 @@ $productores = [
         'unidades' => [[
             'id' => 'p1-u1',
             'cultivos' => [
-                ['id' => 'p1-c1', 'cultivo' => 'Maíz', 'superficieHa' => 300, 'insumos' => [
-                    ['producto' => 'Semilla', 'unidadXHa' => 1, 'usdXUnidad' => 300, 'facturacionAnterior' => 70000],
-                    ['producto' => 'Glifosato', 'unidadXHa' => 10, 'usdXUnidad' => 4.5, 'facturacionAnterior' => 9000],
-                ]],
-                ['id' => 'p1-c2', 'cultivo' => 'Soja', 'superficieHa' => 150, 'insumos' => [
-                    ['producto' => 'Semilla', 'unidadXHa' => 1, 'usdXUnidad' => 180, 'facturacionAnterior' => 24000],
-                ]],
+                ['id' => 'p1-c1', 'cultivo' => 'Maíz', 'superficieHa' => 300, 'facturado' => 88000],
+                ['id' => 'p1-c2', 'cultivo' => 'Soja', 'superficieHa' => 150, 'facturado' => 21000],
+                ['id' => 'p1-c3', 'cultivo' => 'Trigo', 'superficieHa' => 150, 'facturado' => 13000],
             ],
         ]],
     ],
@@ -69,9 +65,8 @@ $productores = [
         'unidades' => [[
             'id' => 'p2-u1',
             'cultivos' => [
-                ['id' => 'p2-c1', 'cultivo' => 'Soja', 'superficieHa' => 200, 'insumos' => [
-                    ['producto' => 'Semilla', 'unidadXHa' => 1, 'usdXUnidad' => 180, 'facturacionAnterior' => 30000],
-                ]],
+                ['id' => 'p2-c1', 'cultivo' => 'Soja', 'superficieHa' => 200, 'facturado' => 30000],
+                ['id' => 'p2-c2', 'cultivo' => 'Trigo', 'superficieHa' => 120, 'facturado' => 8000],
             ],
         ]],
     ],

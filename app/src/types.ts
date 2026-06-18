@@ -55,11 +55,11 @@ export interface InsumoLinea {
 export interface Cultivo {
   id: string;
   cultivo: string;
-  variedad?: string;
   superficieHa: number;
-  otros?: string;
-  insumos: InsumoLinea[];
+  facturado: number;
 }
+
+export const CULTIVOS = ["Maíz", "Soja", "Trigo", "Girasol", "Cebada", "Sorgo"] as const;
 
 export interface UnidadProductiva {
   id: string;

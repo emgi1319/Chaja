@@ -1,128 +1,16 @@
 import type { NotaCampo, Operacion, Producto, Productor, Referido } from "../types";
 
-// Datos de ejemplo para la demostración local. Se reemplazan por el catálogo y
-// la cartera reales del cliente una vez confirmado el Hito 1.
+// Datos de ejemplo para el modo local (sin backend). Con backend, los datos
+// salen del seed del servidor.
 export const DEMO_PRODUCTOS: Producto[] = [
-  {
-    id: "prod-1",
-    codigo: "SEM-MZ-7210",
-    nombre: "Semilla de maíz DK 7210 VT3P",
-    empresa: "Dekalb",
-    principioActivo: "Maíz híbrido",
-    presentacion: "Bolsa 80.000 semillas",
-    precio1: 320,
-    precio2: 308,
-    precio3: 300,
-    stock: 120,
-  },
-  {
-    id: "prod-2",
-    codigo: "SEM-SJ-46I20",
-    nombre: "Semilla de soja DM 46i20",
-    empresa: "Don Mario",
-    principioActivo: "Soja grupo IV",
-    presentacion: "Bolsa 40 kg",
-    precio1: 95,
-    precio2: 90,
-    precio3: 86,
-    stock: 200,
-  },
-  {
-    id: "prod-3",
-    codigo: "SEM-TR-620",
-    nombre: "Semilla de trigo Baguette 620",
-    empresa: "Nidera",
-    principioActivo: "Trigo pan",
-    presentacion: "Bolsa 25 kg",
-    precio1: 42,
-    precio2: 40,
-    precio3: 38,
-    stock: 150,
-  },
-  {
-    id: "prod-4",
-    codigo: "HRB-GLI-62",
-    nombre: "Glifosato 62%",
-    empresa: "Atanor",
-    principioActivo: "Glifosato",
-    presentacion: "Bidón 20 L",
-    precio1: 4.5,
-    precio2: 4.3,
-    precio3: 4.1,
-    stock: 800,
-  },
-  {
-    id: "prod-5",
-    codigo: "HRB-ATZ-50",
-    nombre: "Atrazina 50%",
-    empresa: "Red Surcos",
-    principioActivo: "Atrazina",
-    presentacion: "Bidón 20 L",
-    precio1: 6.2,
-    precio2: 5.9,
-    precio3: 5.6,
-    stock: 300,
-  },
-  {
-    id: "prod-6",
-    codigo: "INS-CIP-25",
-    nombre: "Cipermetrina 25%",
-    empresa: "Chemotecnica",
-    principioActivo: "Cipermetrina",
-    presentacion: "Bidón 5 L",
-    precio1: 12,
-    precio2: 11.4,
-    precio3: 10.8,
-    stock: 180,
-  },
-  {
-    id: "prod-7",
-    codigo: "FUN-AZX-CPZ",
-    nombre: "Azoxistrobina + Ciproconazole",
-    empresa: "Syngenta",
-    principioActivo: "Azoxistrobina/Ciproconazole",
-    presentacion: "Bidón 5 L",
-    precio1: 38,
-    precio2: 36,
-    precio3: 34,
-    stock: 90,
-  },
-  {
-    id: "prod-8",
-    codigo: "FER-UREA",
-    nombre: "Urea granulada",
-    empresa: "Profertil",
-    principioActivo: "Nitrógeno 46%",
-    presentacion: "Big bag 1.000 kg",
-    precio1: 520,
-    precio2: 505,
-    precio3: 490,
-    stock: 60,
-  },
-  {
-    id: "prod-9",
-    codigo: "FER-DAP",
-    nombre: "Fosfato diamónico (DAP)",
-    empresa: "Bunge",
-    principioActivo: "Fósforo 46% / Nitrógeno 18%",
-    presentacion: "Big bag 1.000 kg",
-    precio1: 700,
-    precio2: 680,
-    precio3: 660,
-    stock: 45,
-  },
-  {
-    id: "prod-10",
-    codigo: "INO-SOJ",
-    nombre: "Inoculante para soja",
-    empresa: "Rizobacter",
-    principioActivo: "Bradyrhizobium",
-    presentacion: "Dosis 50 ha",
-    precio1: 180,
-    precio2: 172,
-    precio3: 165,
-    stock: 100,
-  },
+  { id: "prod-1", codigo: "SEM-MAI-01", nombre: "Semilla Maíz DK72-10", empresa: "Dekalb", principioActivo: "Maíz híbrido", presentacion: "Bolsa 80.000 sem.", precio1: 300, precio2: 290, precio3: 280, stock: 120 },
+  { id: "prod-2", codigo: "SEM-SOJ-01", nombre: "Semilla Soja DM53i54", empresa: "Don Mario", principioActivo: "Soja grupo IV", presentacion: "Bolsa 40 kg", precio1: 180, precio2: 172, precio3: 165, stock: 150 },
+  { id: "prod-3", codigo: "HER-GLI-01", nombre: "Glifosato Premium", empresa: "Atanor", principioActivo: "Glifosato", presentacion: "Bidón 20 L", precio1: 5, precio2: 4.7, precio3: 4.4, stock: 5000 },
+  { id: "prod-4", codigo: "HER-24D-01", nombre: "Herbicida 2,4-D", empresa: "YPF Agro", principioActivo: "2,4-D", presentacion: "Bidón 20 L", precio1: 6, precio2: 5.7, precio3: 5.4, stock: 800 },
+  { id: "prod-5", codigo: "FUN-AZO-01", nombre: "Fungicida Azox", empresa: "Syngenta", principioActivo: "Azoxistrobina", presentacion: "Bidón 5 L", precio1: 35, precio2: 33, precio3: 31, stock: 200 },
+  { id: "prod-6", codigo: "INS-CIP-01", nombre: "Insecticida Ciper", empresa: "Red Surcos", principioActivo: "Cipermetrina", presentacion: "Bidón 5 L", precio1: 12, precio2: 11.4, precio3: 10.8, stock: 300 },
+  { id: "prod-7", codigo: "FER-URE-01", nombre: "Urea Granulada", empresa: "Profertil", principioActivo: "Nitrógeno 46%", presentacion: "Tonelada", precio1: 520, precio2: 505, precio3: 490, stock: 80 },
+  { id: "prod-8", codigo: "FER-DAP-01", nombre: "Fertilizante DAP", empresa: "Bunge", principioActivo: "Fósforo/Nitrógeno", presentacion: "Tonelada", precio1: 680, precio2: 660, precio3: 640, stock: 60 },
 ];
 
 export function demoProductores(): Productor[] {
@@ -131,57 +19,18 @@ export function demoProductores(): Productor[] {
     {
       id: "p1",
       razonSocial: "Estancia La Esperanza S.A.",
-      cuitRut: "30-71234567-9",
       localidad: "Pergamino",
-      departamento: "Buenos Aires",
-      pais: "Argentina",
       telefono: "+54 2477 412345",
-      celular: "+54 9 2477 512345",
       email: "compras@laesperanza.com.ar",
-      anioInicio: "1998",
-      zonasProduccion: "Pergamino, Colón",
-      creditoAcordado: 250000,
-      potencialPct: 75,
-      fidelidad: "Alta",
-      propietarioOArrendatario: "Propietario",
-      codigoClasificacion: "C1",
-      facturacion2023: 98000,
-      facturacion2024: 112000,
-      facturacion2025: 126000,
-      contactos: [
-        {
-          nombre: "Oscar Juliá",
-          rolContacto: "Contacto principal",
-          celular: "+54 9 2477 512345",
-          email: "oscar@laesperanza.com.ar",
-        },
-      ],
+      contactos: [{ nombre: "Oscar Juliá", rolContacto: "Contacto principal", celular: "+54 9 2477 512345" }],
       unidades: [
         {
           id: "p1-u1",
           lng: -60.5736,
           lat: -33.8895,
           cultivos: [
-            {
-              id: "p1-c1",
-              cultivo: "Maíz",
-              variedad: "DK 7210",
-              superficieHa: 300,
-              insumos: [
-                { producto: "Semilla", unidadXHa: 1, usdXUnidad: 300, facturacionAnterior: 70000 },
-                { producto: "Glifosato", unidadXHa: 10, usdXUnidad: 4.5, facturacionAnterior: 9000 },
-              ],
-            },
-            {
-              id: "p1-c2",
-              cultivo: "Soja",
-              variedad: "DM 46i20",
-              superficieHa: 150,
-              insumos: [
-                { producto: "Semilla", unidadXHa: 1, usdXUnidad: 180, facturacionAnterior: 24000 },
-                { producto: "Herbicida", unidadXHa: 10, usdXUnidad: 4.5, facturacionAnterior: 0 },
-              ],
-            },
+            { id: "p1-c1", cultivo: "Maíz", superficieHa: 300, facturado: 79000 },
+            { id: "p1-c2", cultivo: "Soja", superficieHa: 150, facturado: 22000 },
           ],
         },
       ],
@@ -190,38 +39,13 @@ export function demoProductores(): Productor[] {
     {
       id: "p2",
       razonSocial: "Agropecuaria Don Alfredo",
-      cuitRut: "30-70987654-3",
       localidad: "Venado Tuerto",
-      departamento: "Santa Fe",
-      pais: "Argentina",
       celular: "+54 9 3462 540321",
-      email: "alfredo@donalfredo.com.ar",
-      anioInicio: "2005",
-      zonasProduccion: "Venado Tuerto",
-      potencialPct: 55,
-      fidelidad: "Media",
-      propietarioOArrendatario: "Arrendatario",
-      codigoClasificacion: "C2",
-      facturacion2024: 41000,
-      facturacion2025: 47000,
-      contactos: [
-        { nombre: "Alfredo Sosa", rolContacto: "Contacto principal", celular: "+54 9 3462 540321" },
-      ],
+      contactos: [{ nombre: "Alfredo Sosa", rolContacto: "Contacto principal", celular: "+54 9 3462 540321" }],
       unidades: [
         {
           id: "p2-u1",
-          cultivos: [
-            {
-              id: "p2-c1",
-              cultivo: "Soja",
-              variedad: "DM 46i20",
-              superficieHa: 200,
-              insumos: [
-                { producto: "Semilla", unidadXHa: 1, usdXUnidad: 180, facturacionAnterior: 30000 },
-                { producto: "Inoculante", unidadXHa: 0.02, usdXUnidad: 180, facturacionAnterior: 0 },
-              ],
-            },
-          ],
+          cultivos: [{ id: "p2-c1", cultivo: "Soja", superficieHa: 200, facturado: 30000 }],
         },
       ],
       updatedAt: now,
@@ -230,31 +54,11 @@ export function demoProductores(): Productor[] {
       id: "p3",
       razonSocial: "Establecimiento El Ombú",
       localidad: "Junín",
-      departamento: "Buenos Aires",
-      pais: "Argentina",
-      celular: "+54 9 2364 530210",
-      potencialPct: 40,
-      fidelidad: "Baja",
-      propietarioOArrendatario: "Propietario",
-      codigoClasificacion: "C3",
-      contactos: [
-        { nombre: "Marta Ferreyra", rolContacto: "Contacto principal", celular: "+54 9 2364 530210" },
-      ],
+      contactos: [{ nombre: "Marta Ferreyra", rolContacto: "Contacto principal", celular: "+54 9 2364 530210" }],
       unidades: [
         {
           id: "p3-u1",
-          cultivos: [
-            {
-              id: "p3-c1",
-              cultivo: "Maíz",
-              variedad: "DK 7210",
-              superficieHa: 250,
-              insumos: [
-                { producto: "Semilla", unidadXHa: 1, usdXUnidad: 300, facturacionAnterior: 0 },
-                { producto: "Urea", unidadXHa: 0.2, usdXUnidad: 520, facturacionAnterior: 0 },
-              ],
-            },
-          ],
+          cultivos: [{ id: "p3-c1", cultivo: "Maíz", superficieHa: 250, facturado: 0 }],
         },
       ],
       updatedAt: now,
@@ -270,23 +74,20 @@ export interface VendedorMetrica {
 }
 
 export const DEMO_VENDEDORES: VendedorMetrica[] = [
-  { nombre: "Diego Romero", objetivo: 120000, logrado: 86000, referidos: 7 },
-  { nombre: "Lucía Méndez", objetivo: 100000, logrado: 94000, referidos: 11 },
-  { nombre: "Pablo Sosa", objetivo: 90000, logrado: 52000, referidos: 4 },
+  { nombre: "Martín Suárez", objetivo: 267000, logrado: 187000, referidos: 7 },
+  { nombre: "Lucía Fernández", objetivo: 219000, logrado: 160000, referidos: 11 },
+  { nombre: "Diego Romero", objetivo: 260000, logrado: 177000, referidos: 4 },
 ];
 
 export function demoNotas(): NotaCampo[] {
   const day = 86400000;
   const t = Date.now();
   const base = [
-    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", actividad: "negociacion", medio: "Campo", nota: "Interesado en cerrar semilla y herbicida para la campaña.", por: "Diego Romero" },
-    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Soja", actividad: "presupuesto", medio: "Oficina cliente", nota: "Enviado presupuesto de semilla DM 46i20.", por: "Diego Romero" },
-    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "visita_campo", medio: "Campo", nota: "Recorrida de lote, evaluación de malezas.", por: "Lucía Méndez" },
-    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "venta", medio: "Oficina cliente", nota: "Cerró inoculante y parte de la semilla.", por: "Lucía Méndez" },
-    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", actividad: "inicio_contacto", medio: "Email", nota: "Primer contacto, agendar visita.", por: "Pablo Sosa" },
-    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", actividad: "agenda_visita", medio: "Agronomía", nota: "Visita coordinada para la próxima semana.", por: "Pablo Sosa" },
-    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", actividad: "cobranza", medio: "Oficina cliente", nota: "Saldo de la operación anterior en gestión.", por: "Diego Romero" },
-    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "en_proceso", medio: "Campo", nota: "Definiendo volumen de fertilizante.", por: "Lucía Méndez" },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", actividad: "negociacion", medio: "Campo", nota: "Interesado en cerrar semilla y herbicida para la campaña.", por: "Martín Suárez" },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Soja", actividad: "presupuesto", medio: "Oficina cliente", nota: "Enviado presupuesto de semilla.", por: "Martín Suárez" },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "visita_campo", medio: "Campo", nota: "Recorrida de lote, evaluación de malezas.", por: "Lucía Fernández" },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", actividad: "venta", medio: "Oficina cliente", nota: "Cerró parte de la semilla.", por: "Lucía Fernández" },
+    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", actividad: "inicio_contacto", medio: "Email", nota: "Primer contacto, agendar visita.", por: "Diego Romero" },
   ] as const;
   return base.map((b, i) => ({
     id: `nota-${i + 1}`,
@@ -305,11 +106,11 @@ export function demoNotas(): NotaCampo[] {
 export function demoReferidos(): Referido[] {
   const t = Date.now();
   const rows: Array<Omit<Referido, "id" | "updatedAt">> = [
-    { nombre: "Juan Pérez", referidor: "Nicolás Díaz", proceso: "venta", movil: "+54 9 2477 511111", estadoCivil: "Casado", observaciones: "Cerró compra de semilla." },
-    { nombre: "Marta Quiroga", referidor: "Oscar Juliá", proceso: "presupuesto", movil: "+54 9 3462 522222", observaciones: "Esperando respuesta al presupuesto." },
-    { nombre: "Sergio Benítez", referidor: "Alfredo Sosa", proceso: "visita", movil: "+54 9 2364 533333" },
-    { nombre: "Laura Gómez", referidor: "Marta Ferreyra", proceso: "envie_wp", movil: "+54 9 11 5444 4444" },
-    { nombre: "Raúl Medina", referidor: "Nicolás Díaz", proceso: "no_contesta", movil: "+54 9 2477 555555" },
+    { nombre: "Juan Pérez", referidor: "Nicolás Díaz", proceso: "en_proceso", movil: "+54 9 2477 511111", observaciones: "Recontactar la semana próxima." },
+    { nombre: "Laura Méndez", referidor: "Juan Pérez", proceso: "presupuesto", movil: "+54 9 3462 522222", observaciones: "Presupuesto de semilla de soja enviado." },
+    { nombre: "Sergio Díaz", referidor: "Lucía Fernández", proceso: "visita", movil: "+54 9 2364 533333", observaciones: "Visita al campo agendada." },
+    { nombre: "Marta Quiroga", referidor: "Nicolás Díaz", proceso: "venta", movil: "+54 9 11 5444 4444", observaciones: "Cerró compra de fertilizante." },
+    { nombre: "Pablo Sosa", referidor: "Diego Romero", proceso: "no_venta", observaciones: "Ya trabaja con otro proveedor." },
   ];
   return rows.map((r, i) => ({ ...r, id: `ref-${i + 1}`, updatedAt: t - i * 3600000 }));
 }
@@ -318,12 +119,10 @@ export function demoOperaciones(): Operacion[] {
   const t = Date.now();
   const day = 86400000;
   const rows: Array<Omit<Operacion, "id" | "updatedAt">> = [
-    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", producto: "Semilla de maíz DK 7210", valorPotencial: 90000, etapa: "negociacion", estado: "abierta", fechaInicio: new Date(t - 10 * day).toISOString() },
-    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", producto: "Glifosato", valorPotencial: 13500, etapa: "presupuesto", estado: "abierta", fechaInicio: new Date(t - 8 * day).toISOString() },
-    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Soja", producto: "Semilla de soja", valorPotencial: 27000, etapa: "venta", estado: "ganada", fechaInicio: new Date(t - 20 * day).toISOString(), montoFacturado: 24000 },
-    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", producto: "Inoculante", valorPotencial: 720, etapa: "venta", estado: "ganada", fechaInicio: new Date(t - 15 * day).toISOString(), montoFacturado: 720 },
-    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", producto: "Semilla de soja", valorPotencial: 36000, etapa: "en_proceso", estado: "abierta", fechaInicio: new Date(t - 6 * day).toISOString() },
-    { productorId: "p3", productorNombre: "Establecimiento El Ombú", cultivo: "Maíz", producto: "Semilla de maíz DK 7210", valorPotencial: 75000, etapa: "inicio_contacto", estado: "abierta", fechaInicio: new Date(t - 3 * day).toISOString() },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", producto: "Semilla", valorPotencial: 20000, etapa: "negociacion", estado: "abierta", fechaInicio: new Date(t - 10 * day).toISOString() },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Maíz", producto: "Glifosato", valorPotencial: 4500, etapa: "presupuesto", estado: "abierta", fechaInicio: new Date(t - 8 * day).toISOString() },
+    { productorId: "p1", productorNombre: "Estancia La Esperanza S.A.", cultivo: "Soja", producto: "Semilla", valorPotencial: 3000, etapa: "venta", estado: "ganada", fechaInicio: new Date(t - 20 * day).toISOString(), montoFacturado: 3000 },
+    { productorId: "p2", productorNombre: "Agropecuaria Don Alfredo", cultivo: "Soja", producto: "Inoculante", valorPotencial: 720, etapa: "en_proceso", estado: "abierta", fechaInicio: new Date(t - 6 * day).toISOString() },
   ];
   return rows.map((r, i) => ({ ...r, id: `op-${i + 1}`, updatedAt: t - i * 3600000 }));
 }

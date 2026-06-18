@@ -1,57 +1,23 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Field, PrimaryButton } from "./ui";
+import { Field, PrimaryButton, Dropdown } from "./ui";
 import { productores } from "../lib/api";
 import { newId } from "../lib/db";
-import type { Cultivo, InsumoLinea, Productor } from "../types";
+import { CULTIVOS, type Cultivo, type Productor } from "../types";
 import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { useApp } from "../store";
 
-type InsumoDraft = {
-  producto: string;
-  unidadXHa: string;
-  usdXUnidad: string;
-  facturacionAnterior: string;
-};
-
-type CultivoDraft = {
-  id: string;
-  cultivo: string;
-  superficieHa: string;
-  insumos: InsumoDraft[];
-};
+type CultivoDraft = { id: string; cultivo: string; superficieHa: string };
 
 function num(s: string): number {
   const n = parseFloat(s.replace(",", "."));
   return isNaN(n) ? 0 : n;
 }
 
-const emptyInsumo = (): InsumoDraft => ({
-  producto: "",
-  unidadXHa: "",
-  usdXUnidad: "",
-  facturacionAnterior: "",
-});
-
-const emptyCultivo = (): CultivoDraft => ({
-  id: newId(),
-  cultivo: "",
-  superficieHa: "",
-  insumos: [emptyInsumo()],
-});
+const emptyCultivo = (): CultivoDraft => ({ id: newId(), cultivo: "Maíz", superficieHa: "" });
 
 function toCultivo(d: CultivoDraft): Cultivo {
-  return {
-    id: d.id,
-    cultivo: d.cultivo,
-    superficieHa: num(d.superficieHa),
-    insumos: d.insumos.map<InsumoLinea>((i) => ({
-      producto: i.producto,
-      unidadXHa: num(i.unidadXHa),
-      usdXUnidad: num(i.usdXUnidad),
-      facturacionAnterior: num(i.facturacionAnterior),
-    })),
-  };
+  return { id: d.id, cultivo: d.cultivo, superficieHa: num(d.superficieHa), facturado: 0 };
 }
 
 export function ClienteForm({ onSaved }: { onSaved: () => void }) {
@@ -64,18 +30,8 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const valorTotal = cultivos.reduce((acc, c) => acc + valorCultivo(toCultivo(c)), 0);
-
-  const patchCultivo = (id: string, patch: Partial<CultivoDraft>) =>
-    setCultivos((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-
-  const patchInsumo = (cid: string, idx: number, patch: Partial<InsumoDraft>) =>
-    setCultivos((cs) =>
-      cs.map((c) =>
-        c.id === cid
-          ? { ...c, insumos: c.insumos.map((i, n) => (n === idx ? { ...i, ...patch } : i)) }
-          : c,
-      ),
-    );
+  const patch = (id: string, p: Partial<CultivoDraft>) =>
+    setCultivos((cs) => cs.map((c) => (c.id === id ? { ...c, ...p } : c)));
 
   const guardar = async () => {
     if (!razonSocial.trim()) return;
@@ -99,7 +55,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <Field label="Razón social" value={razonSocial} onChange={setRazonSocial} />
+        <Field label="Nombre del establecimiento" value={razonSocial} onChange={setRazonSocial} />
         <Field label="Localidad" value={localidad} onChange={setLocalidad} />
         <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
         <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
@@ -107,7 +63,7 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="font-display text-[15px] font-semibold text-ink">Cultivos</p>
+          <p className="font-display text-[15px] font-semibold text-ink">Cultivos del establecimiento</p>
           <button
             onClick={() => setCultivos((cs) => [...cs, emptyCultivo()])}
             className="flex items-center gap-1 text-[13px] font-semibold text-primary"
@@ -117,18 +73,19 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
         </div>
 
         {cultivos.map((c) => (
-          <div key={c.id} className="rounded-2xl border border-line p-3">
+          <div key={c.id} className="space-y-3 rounded-2xl border border-line p-3">
             <div className="flex items-start gap-2">
               <div className="flex-1 space-y-3">
-                <Field
+                <Dropdown
                   label="Cultivo"
                   value={c.cultivo}
-                  onChange={(v) => patchCultivo(c.id, { cultivo: v })}
+                  options={CULTIVOS.map((x) => ({ value: x as string, label: x }))}
+                  onChange={(v) => patch(c.id, { cultivo: v })}
                 />
                 <Field
-                  label="Superficie (ha)"
+                  label="Hectáreas"
                   value={c.superficieHa}
-                  onChange={(v) => patchCultivo(c.id, { superficieHa: v })}
+                  onChange={(v) => patch(c.id, { superficieHa: v })}
                   inputMode="decimal"
                 />
               </div>
@@ -142,65 +99,21 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
                 </button>
               )}
             </div>
-
-            <div className="mt-3 space-y-2">
-              <p className="label">Insumos</p>
-              {c.insumos.map((i, idx) => (
-                <div key={idx} className="rounded-xl bg-surface p-3">
-                  <input
-                    value={i.producto}
-                    onChange={(e) => patchInsumo(c.id, idx, { producto: e.target.value })}
-                    placeholder="Producto (semilla, herbicida…)"
-                    className="w-full bg-transparent pb-2 text-[14px] outline-none"
-                  />
-                  <div className="grid grid-cols-3 gap-2">
-                    <input
-                      value={i.unidadXHa}
-                      onChange={(e) => patchInsumo(c.id, idx, { unidadXHa: e.target.value })}
-                      placeholder="Un/ha"
-                      inputMode="decimal"
-                      className="rounded-lg bg-white px-2 py-2 text-[13px] outline-none"
-                    />
-                    <input
-                      value={i.usdXUnidad}
-                      onChange={(e) => patchInsumo(c.id, idx, { usdXUnidad: e.target.value })}
-                      placeholder="U$S/un"
-                      inputMode="decimal"
-                      className="rounded-lg bg-white px-2 py-2 text-[13px] outline-none"
-                    />
-                    <input
-                      value={i.facturacionAnterior}
-                      onChange={(e) =>
-                        patchInsumo(c.id, idx, { facturacionAnterior: e.target.value })
-                      }
-                      placeholder="Fact. ant."
-                      inputMode="decimal"
-                      className="rounded-lg bg-white px-2 py-2 text-[13px] outline-none"
-                    />
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => patchCultivo(c.id, { insumos: [...c.insumos, emptyInsumo()] })}
-                className="text-[13px] font-semibold text-primary"
-              >
-                + Insumo
-              </button>
-            </div>
-
-            <p className="mt-2 text-right text-[13px] text-ink-muted">
-              Valor cultivo:{" "}
+            <p className="text-right text-[13px] text-ink-muted">
+              Valor potencial:{" "}
               <span className="font-semibold text-accent">{formatUsd(valorCultivo(toCultivo(c)))}</span>
             </p>
           </div>
         ))}
+        <p className="text-[12px] text-ink-muted">
+          El costo por hectárea sale de Parámetros; el facturado se carga en la ficha de Valor
+          Cliente.
+        </p>
       </div>
 
       <div className="flex items-center justify-between border-t border-line pt-3">
         <span className="text-[14px] text-ink-muted">Valor cliente</span>
-        <span className="font-display text-[18px] font-bold text-accent">
-          {formatUsd(valorTotal)}
-        </span>
+        <span className="font-display text-[18px] font-bold text-accent">{formatUsd(valorTotal)}</span>
       </div>
 
       <PrimaryButton disabled={saving || !razonSocial.trim()} onClick={guardar}>

@@ -1,5 +1,12 @@
 import { notasCampo, operaciones, productores, referidos } from "./api";
-import { diferenciaTotal, formatUsd, valorClienteTotal, valorCultivo } from "./valor-cliente";
+import {
+  diferenciaTotal,
+  facturadoCliente,
+  facturadoCultivo,
+  formatUsd,
+  valorClienteTotal,
+  valorCultivo,
+} from "./valor-cliente";
 import {
   ESTADOS_PROCESO,
   ESTADO_PROCESO_LABEL,
@@ -89,18 +96,6 @@ export function resumenCartera(): string[] {
   return lines;
 }
 
-function facturadoProductor(p: Productor): number {
-  return p.unidades.reduce(
-    (a, u) =>
-      a +
-      u.cultivos.reduce(
-        (ac, c) => ac + c.insumos.reduce((s, i) => s + (i.facturacionAnterior || 0), 0),
-        0,
-      ),
-    0,
-  );
-}
-
 export interface ProductorRow {
   productor: Productor;
   potencial: number;
@@ -114,7 +109,7 @@ export function productoresRows(): ProductorRow[] {
     .list()
     .map((p) => {
       const potencial = valorClienteTotal(p);
-      const facturado = facturadoProductor(p);
+      const facturado = facturadoCliente(p);
       return {
         productor: p,
         potencial,
@@ -140,7 +135,7 @@ export function capturaPorCultivo(): CultivoRow[] {
       for (const c of u.cultivos) {
         const cur = map.get(c.cultivo) ?? { potencial: 0, facturado: 0 };
         cur.potencial += valorCultivo(c);
-        cur.facturado += c.insumos.reduce((s, i) => s + (i.facturacionAnterior || 0), 0);
+        cur.facturado += facturadoCultivo(c);
         map.set(c.cultivo, cur);
       }
     }
