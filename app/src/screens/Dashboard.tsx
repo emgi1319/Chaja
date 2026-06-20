@@ -10,7 +10,6 @@ import {
   Target,
   TrendingUp,
   DollarSign,
-  Percent,
   Clock,
   ArrowLeft,
   Plus,
@@ -19,7 +18,6 @@ import {
   UserPlus,
   Calculator,
   Sliders,
-  Bird,
   ClipboardCheck,
   Trash2,
   PanelLeftClose,
@@ -44,6 +42,7 @@ import {
   type Cultivo,
   type EstadoOperacion,
   type EstadoProceso,
+  type InsumoLinea,
   type Referido,
 } from "../types";
 import {
@@ -68,7 +67,6 @@ import {
 } from "../lib/valor-cliente";
 import {
   setCostosHa,
-  costoHa,
   getConfig,
   getObjetivoCampania,
   getNombreCampania,
@@ -1205,9 +1203,17 @@ function ValorClienteScreen() {
   const [rows, setRows] = useState<Cultivo[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const [saved, setSaved] = useState(false);
+
   useEffect(() => {
     const p = productores.get(id);
-    setRows(p ? p.unidades.flatMap((u) => u.cultivos).map((c) => ({ ...c })) : []);
+    setRows(
+      p
+        ? p.unidades
+            .flatMap((u) => u.cultivos)
+            .map((c) => ({ ...c, insumos: (c.insumos ?? []).map((x) => ({ ...x })) }))
+        : [],
+    );
   }, [id]);
 
   const potencial = rows.reduce((a, c) => a + valorCultivo(c), 0);
@@ -1215,8 +1221,34 @@ function ValorClienteScreen() {
   const oportunidad = potencial - facturado;
   const captura = potencial > 0 ? facturado / potencial : 0;
 
-  const patch = (i: number, p: Partial<Cultivo>) =>
+  const patchCultivo = (i: number, p: Partial<Cultivo>) =>
     setRows((rs) => rs.map((c, n) => (n === i ? { ...c, ...p } : c)));
+  const patchInsumo = (ci: number, ii: number, p: Partial<InsumoLinea>) =>
+    setRows((rs) =>
+      rs.map((c, n) =>
+        n === ci
+          ? { ...c, insumos: (c.insumos ?? []).map((x, m) => (m === ii ? { ...x, ...p } : x)) }
+          : c,
+      ),
+    );
+  const addInsumo = (ci: number) =>
+    setRows((rs) =>
+      rs.map((c, n) =>
+        n === ci
+          ? {
+              ...c,
+              insumos: [
+                ...(c.insumos ?? []),
+                { producto: "", unidad: "u", unidadXHa: 0, usdXUnidad: 0, facturacionAnterior: 0 },
+              ],
+            }
+          : c,
+      ),
+    );
+  const removeInsumo = (ci: number, ii: number) =>
+    setRows((rs) =>
+      rs.map((c, n) => (n === ci ? { ...c, insumos: (c.insumos ?? []).filter((_, m) => m !== ii) } : c)),
+    );
 
   const guardar = async () => {
     const productor = productores.get(id);
@@ -1228,13 +1260,20 @@ function ValorClienteScreen() {
       updatedAt: Date.now(),
     });
     setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   };
+
+  const numField =
+    "w-full rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
+  const txtField =
+    "w-full rounded-lg bg-surface px-2 py-1.5 text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
 
   return (
     <div className="space-y-4">
       <p className="text-[13px] text-ink-muted">
-        Cargá las hectáreas por cultivo; el costo por ha viene de Parámetros y se calcula el
-        potencial y la oportunidad.
+        Armá la canasta de insumos por cultivo (dosis/ha, precio y lo facturado el ciclo anterior).
+        El valor potencial y la oportunidad se calculan solos.
       </p>
       <div className="max-w-xs">
         <Dropdown
@@ -1248,56 +1287,144 @@ function ValorClienteScreen() {
         <Kpi icon={Target} label="Valor potencial" value={formatUsd(potencial)} tone="accent" />
         <Kpi icon={DollarSign} label="Facturado" value={formatUsd(facturado)} />
         <Kpi icon={TrendingUp} label="Oportunidad" value={formatUsd(oportunidad)} tone="amber" />
-        <Kpi icon={Percent} label="Capturado" value={formatPct(captura)} />
+        <Kpi icon={Gauge} label="Capturado" value={formatPct(captura)} />
       </div>
 
-      <TableShell
-        head={["Cultivo", "Hectáreas", "Costo/ha", "Valor potencial", "Facturado", "Oportunidad"]}
-      >
-        {rows.map((c, i) => (
-          <tr key={c.id} className="border-t border-line">
-            <td className="px-4 py-2">
-              <select
-                value={c.cultivo}
-                onChange={(e) => patch(i, { cultivo: e.target.value })}
-                className="rounded-lg bg-surface px-2 py-1.5 text-[13px] outline-none"
+      {rows.map((c, ci) => {
+        const potC = valorCultivo(c);
+        const factC = facturadoCultivo(c);
+        return (
+          <div key={c.id} className="card space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sprout size={16} className="text-accent" />
+                <select
+                  value={c.cultivo}
+                  onChange={(e) => patchCultivo(ci, { cultivo: e.target.value })}
+                  className="rounded-lg bg-surface px-2 py-1.5 text-[14px] font-semibold outline-none"
+                >
+                  {CULTIVOS.map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={c.superficieHa || 0}
+                  onChange={(e) => patchCultivo(ci, { superficieHa: Number(e.target.value) })}
+                  className="w-20 rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none"
+                />
+                <span className="text-[12px] text-ink-muted">ha</span>
+              </div>
+              <button
+                onClick={() => setRows((rs) => rs.filter((_, n) => n !== ci))}
+                className="text-[12px] text-ink-muted hover:text-danger"
               >
-                {CULTIVOS.map((x) => (
-                  <option key={x} value={x}>
-                    {x}
-                  </option>
-                ))}
-              </select>
-            </td>
-            <td className="px-4 py-2 text-right">
-              <input
-                type="number"
-                value={c.superficieHa || 0}
-                onChange={(e) => patch(i, { superficieHa: Number(e.target.value) })}
-                className="w-20 rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none"
-              />
-            </td>
-            <td className="px-4 py-2 text-right text-ink-muted">{formatUsd(costoHa(c.cultivo))}</td>
-            <td className="px-4 py-2 text-right font-semibold text-accent">
-              {formatUsd(valorCultivo(c))}
-            </td>
-            <td className="px-4 py-2 text-right">
-              <input
-                type="number"
-                value={c.facturado || 0}
-                onChange={(e) => patch(i, { facturado: Number(e.target.value) })}
-                className="w-24 rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none"
-              />
-            </td>
-            <td className="px-4 py-2 text-right text-amber">{formatUsd(oportunidadCultivo(c))}</td>
-          </tr>
-        ))}
-      </TableShell>
+                Quitar cultivo
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead className="text-left text-[11px] uppercase tracking-wide text-ink-muted">
+                  <tr>
+                    <th className="px-2 py-1 font-medium">Producto</th>
+                    <th className="px-2 py-1 font-medium">Unidad</th>
+                    <th className="px-2 py-1 text-right font-medium">Dosis/ha</th>
+                    <th className="px-2 py-1 text-right font-medium">Precio U$S</th>
+                    <th className="px-2 py-1 text-right font-medium">Fact. ant.</th>
+                    <th className="px-2 py-1 text-right font-medium">Inv. pot.</th>
+                    <th className="px-2 py-1" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {(c.insumos ?? []).map((ins, ii) => (
+                    <tr key={ii} className="border-t border-line">
+                      <td className="min-w-[140px] px-2 py-1.5">
+                        <input
+                          value={ins.producto}
+                          onChange={(e) => patchInsumo(ci, ii, { producto: e.target.value })}
+                          className={txtField}
+                          placeholder="Producto"
+                        />
+                      </td>
+                      <td className="w-20 px-2 py-1.5">
+                        <input
+                          value={ins.unidad ?? ""}
+                          onChange={(e) => patchInsumo(ci, ii, { unidad: e.target.value })}
+                          className={txtField}
+                          placeholder="u"
+                        />
+                      </td>
+                      <td className="w-24 px-2 py-1.5">
+                        <input
+                          type="number"
+                          value={ins.unidadXHa || 0}
+                          onChange={(e) => patchInsumo(ci, ii, { unidadXHa: Number(e.target.value) })}
+                          className={numField}
+                        />
+                      </td>
+                      <td className="w-24 px-2 py-1.5">
+                        <input
+                          type="number"
+                          value={ins.usdXUnidad || 0}
+                          onChange={(e) => patchInsumo(ci, ii, { usdXUnidad: Number(e.target.value) })}
+                          className={numField}
+                        />
+                      </td>
+                      <td className="w-28 px-2 py-1.5">
+                        <input
+                          type="number"
+                          value={ins.facturacionAnterior || 0}
+                          onChange={(e) =>
+                            patchInsumo(ci, ii, { facturacionAnterior: Number(e.target.value) })
+                          }
+                          className={numField}
+                        />
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1.5 text-right font-semibold text-accent">
+                        {formatUsd(inversionInsumo(ins, c.superficieHa))}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        <button
+                          onClick={() => removeInsumo(ci, ii)}
+                          aria-label="Quitar insumo"
+                          className="text-ink-muted hover:text-danger"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <button
+                onClick={() => addInsumo(ci)}
+                className="flex items-center gap-1 text-[13px] font-semibold text-primary"
+              >
+                <Plus size={15} /> Agregar insumo
+              </button>
+              <span className="text-[13px] text-ink-soft">
+                Potencial <span className="font-semibold text-accent">{formatUsd(potC)}</span> · Fact.{" "}
+                <span className="font-semibold text-ink">{formatUsd(factC)}</span> · Oport.{" "}
+                <span className="font-semibold text-amber">{formatUsd(potC - factC)}</span>
+              </span>
+            </div>
+          </div>
+        );
+      })}
 
       <div className="flex items-center gap-2">
         <button
           onClick={() =>
-            setRows((rs) => [...rs, { id: newId(), cultivo: "Maíz", superficieHa: 0, facturado: 0 }])
+            setRows((rs) => [
+              ...rs,
+              { id: newId(), cultivo: "Maíz", superficieHa: 0, facturado: 0, insumos: [] },
+            ])
           }
           className="flex items-center gap-1 rounded-2xl border border-line bg-white px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
         >
@@ -1308,7 +1435,7 @@ function ValorClienteScreen() {
           disabled={saving || !id}
           className="press rounded-2xl bg-primary px-5 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:bg-disabled"
         >
-          {saving ? "Guardando…" : "Guardar"}
+          {saving ? "Guardando…" : saved ? "Guardado" : "Guardar"}
         </button>
       </div>
     </div>
@@ -1338,8 +1465,8 @@ export function Dashboard() {
         }`}
       >
         <div className="flex items-center gap-2 px-4 py-5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
-            <Bird size={20} strokeWidth={2} />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1">
+            <img src="/chaja-mark.png" alt="" className="h-full w-full object-contain" />
           </div>
           <span
             className={`font-display text-[18px] font-bold tracking-wide ${

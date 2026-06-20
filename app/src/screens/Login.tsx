@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Bird } from "lucide-react";
 import { PrimaryButton } from "../components/ui";
 import { login } from "../lib/api";
 import { useApp } from "../store";
@@ -28,11 +27,8 @@ export function Login() {
   return (
     <div className="screen justify-center px-7">
       <div className="fade-in-up flex flex-col items-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary shadow-float">
-          <Bird size={42} strokeWidth={1.8} className="text-white" />
-        </div>
-        <h1 className="mt-4 font-display text-[24px] font-bold tracking-wide text-ink">CHAJÁ</h1>
-        <p className="mt-1 text-[14px] text-ink-muted">Ingresá con tu usuario del sistema</p>
+        <img src="/chaja-logo.png" alt="CHAJÁ" className="h-28 w-auto" />
+        <p className="mt-3 text-[14px] text-ink-muted">Ingresá con tu usuario del sistema</p>
       </div>
 
       <div className="fade-in-up mt-8 space-y-3" style={{ animationDelay: "80ms" }}>
