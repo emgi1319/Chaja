@@ -1,13 +1,24 @@
-import type { Cultivo, Productor } from "../types";
+import type { Cultivo, InsumoLinea, Productor } from "../types";
 import { costoHa } from "./parametros";
 
-// Valor potencial de un cultivo: hectáreas por el costo/ha del cultivo (parámetro
-// global). Es lo que ese productor invertiría en esa superficie.
+// Inversión potencial de un insumo sobre una superficie: dosis/ha x precio x hectáreas.
+export function inversionInsumo(i: InsumoLinea, superficieHa: number): number {
+  return (i.unidadXHa || 0) * (i.usdXUnidad || 0) * (superficieHa || 0);
+}
+
+// Valor potencial de un cultivo. Con canasta de insumos: suma de la inversión
+// potencial de cada insumo. Sin canasta: hectáreas por el costo/ha (parámetro global).
 export function valorCultivo(c: Cultivo): number {
+  if (c.insumos && c.insumos.length > 0) {
+    return c.insumos.reduce((acc, i) => acc + inversionInsumo(i, c.superficieHa), 0);
+  }
   return (c.superficieHa || 0) * costoHa(c.cultivo);
 }
 
 export function facturadoCultivo(c: Cultivo): number {
+  if (c.insumos && c.insumos.length > 0) {
+    return c.insumos.reduce((acc, i) => acc + (i.facturacionAnterior || 0), 0);
+  }
   return c.facturado || 0;
 }
 

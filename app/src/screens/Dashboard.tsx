@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -59,7 +59,13 @@ import {
   vendedoresResumen,
   proximaAccion,
 } from "../lib/analytics";
-import { formatUsd, valorCultivo, facturadoCultivo, oportunidadCultivo } from "../lib/valor-cliente";
+import {
+  formatUsd,
+  valorCultivo,
+  facturadoCultivo,
+  oportunidadCultivo,
+  inversionInsumo,
+} from "../lib/valor-cliente";
 import {
   setCostosHa,
   costoHa,
@@ -800,6 +806,62 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {cultivos.some((c) => c.insumos && c.insumos.length > 0) && (
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-ink-muted">Detalle por producto</p>
+          <div className="card overflow-hidden p-0">
+            <table className="w-full text-[13px]">
+              <thead className="bg-surface text-left text-ink-muted">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Producto</th>
+                  <th className="px-4 py-3 text-right font-medium">Inv. potencial</th>
+                  <th className="px-4 py-3 text-right font-medium">Facturado ant.</th>
+                  <th className="px-4 py-3 text-right font-medium">Oportunidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cultivos.map((c) => (
+                  <Fragment key={c.id}>
+                    <tr className="bg-surface/60">
+                      <td colSpan={4} className="px-4 py-2 text-[12px] font-semibold text-ink-soft">
+                        {c.cultivo} · {c.superficieHa} ha
+                      </td>
+                    </tr>
+                    {(c.insumos ?? []).map((ins, idx) => {
+                      const pot = inversionInsumo(ins, c.superficieHa);
+                      const op = pot - (ins.facturacionAnterior || 0);
+                      return (
+                        <tr key={idx} className="border-t border-line">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-ink">{ins.producto}</p>
+                            <p className="text-[11px] text-ink-muted">
+                              {ins.unidadXHa} {ins.unidad ?? "u"}/ha × {formatUsd(ins.usdXUnidad)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3 text-right text-ink-soft">{formatUsd(pot)}</td>
+                          <td className="px-4 py-3 text-right text-ink-soft">
+                            {formatUsd(ins.facturacionAnterior || 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-amber">{formatUsd(op)}</td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+                <tr className="border-t-2 border-line bg-surface/40">
+                  <td className="px-4 py-3 font-semibold text-ink">Total cliente</td>
+                  <td className="px-4 py-3 text-right font-semibold text-ink">{formatUsd(row.potencial)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-ink">{formatUsd(row.facturado)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-accent">
+                    {formatUsd(row.oportunidad)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       )}

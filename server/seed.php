@@ -44,6 +44,42 @@ foreach ($productos as $i => $p) {
     $stmtProd->execute([$id, $p[0], $p[1], $p[2], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
 }
 
+// Canasta de insumos por cultivo: dosis/ha, precio unitario y captura del ciclo
+// anterior. La inversion potencial se calcula como dosis/ha x precio x hectareas.
+function canasta(string $cultivo, float $ha): array
+{
+    $defs = [
+        'Maíz' => [
+            ['Semilla de maíz', 'bolsa', 1.0, 320, 0.78],
+            ['Glifosato', 'L', 10.0, 4.5, 0.70],
+            ['Urea', 'unidad', 0.25, 520, 0.72],
+        ],
+        'Soja' => [
+            ['Semilla de soja', 'bolsa', 1.0, 95, 0.72],
+            ['Inoculante', 'dosis', 0.02, 180, 0.60],
+            ['Glifosato', 'L', 8.0, 4.5, 0.74],
+        ],
+        'Trigo' => [
+            ['Semilla de trigo', 'bolsa', 1.0, 42, 0.78],
+            ['Urea', 'unidad', 0.2, 520, 0.64],
+            ['Herbicida selectivo', 'L', 1.0, 12, 0.55],
+        ],
+    ];
+    $out = [];
+    foreach ($defs[$cultivo] ?? [] as $r) {
+        [$prod, $unidad, $dosis, $precio, $captura] = $r;
+        $pot = $dosis * $precio * $ha;
+        $out[] = [
+            'producto' => $prod,
+            'unidad' => $unidad,
+            'unidadXHa' => $dosis,
+            'usdXUnidad' => $precio,
+            'facturacionAnterior' => round($pot * $captura),
+        ];
+    }
+    return $out;
+}
+
 $productores = [
     [
         'id' => 'p1', 'razonSocial' => 'Estancia La Esperanza S.A.', 'vendedor' => 'Martín Suárez', 'localidad' => 'Pergamino',
@@ -80,6 +116,15 @@ $productores = [
         ]],
     ],
 ];
+foreach ($productores as &$p) {
+    foreach ($p['unidades'] as &$u) {
+        foreach ($u['cultivos'] as &$c) {
+            $c['insumos'] = canasta((string) $c['cultivo'], (float) $c['superficieHa']);
+        }
+    }
+}
+unset($p, $u, $c);
+
 $stmtPdor = $pdo->prepare(
     'REPLACE INTO productores (id, owner, razon_social, localidad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );

@@ -58,6 +58,10 @@ export interface Cultivo {
   cultivo: string;
   superficieHa: number;
   facturado: number;
+  // Canasta de insumos del cultivo. Si está presente, el valor potencial y el
+  // facturado del cultivo se calculan a partir de ella (modelo del cliente).
+  // Si está vacía, se usa el costo/ha plano de Parámetros como fallback.
+  insumos?: InsumoLinea[];
 }
 
 export const CULTIVOS = ["Maíz", "Soja", "Trigo", "Girasol", "Cebada", "Sorgo"] as const;
