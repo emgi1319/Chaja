@@ -23,10 +23,12 @@ import {
   Sliders,
   Bird,
   ClipboardCheck,
-  Eye,
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
+  Gauge,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
@@ -56,7 +58,7 @@ import {
   operacionesStats,
   referidosStats,
   campaignTotals,
-  alertasCartera,
+  alertasPanel,
   vendedoresResumen,
   proximaAccion,
 } from "../lib/analytics";
@@ -508,14 +510,22 @@ function Kpi({
   value: string;
   tone?: "ink" | "accent" | "amber";
 }) {
-  const color = tone === "accent" ? "text-accent" : tone === "amber" ? "text-amber" : "text-ink";
+  const valueColor = tone === "accent" ? "text-accent" : tone === "amber" ? "text-amber" : "text-ink";
+  const chip =
+    tone === "accent"
+      ? "bg-accent/10 text-accent"
+      : tone === "amber"
+        ? "bg-amber/10 text-amber"
+        : "bg-primary/10 text-primary";
   return (
-    <div className="card card-hover">
-      <div className="flex items-center gap-2 text-ink-muted">
-        <Icon size={16} />
-        <span className="text-[12px]">{label}</span>
+    <div className="card card-hover flex items-center gap-3.5">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${chip}`}>
+        <Icon size={22} strokeWidth={2} />
       </div>
-      <p className={`mt-2 font-display text-[22px] font-bold ${color}`}>{value}</p>
+      <div className="min-w-0">
+        <p className="text-[12px] text-ink-muted">{label}</p>
+        <p className={`font-display text-[23px] font-bold leading-tight ${valueColor}`}>{value}</p>
+      </div>
     </div>
   );
 }
@@ -543,7 +553,7 @@ function Inicio() {
   const t = campaignTotals();
   const objetivo = getObjetivoCampania() || t.potencial;
   const avance = objetivo > 0 ? t.facturado / objetivo : 0;
-  const alertas = alertasCartera();
+  const alertas = alertasPanel();
   const ranking = vendedoresResumen();
   const maxFact = Math.max(1, ...ranking.map((v) => v.facturado));
 
@@ -553,13 +563,15 @@ function Inicio() {
         <h2 className="font-display text-[18px] font-semibold text-ink">
           Panel de la campaña {getNombreCampania()}
         </h2>
-        <p className="text-[13px] text-ink-muted">Resumen de tu operación comercial en tiempo real.</p>
+        <p className="text-[13px] text-ink-muted">
+          Cómo viene la campaña y dónde están las oportunidades de tu cartera.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi icon={DollarSign} label="Facturado campaña" value={formatUsd(t.facturado)} />
         <Kpi icon={TrendingUp} label="Oportunidad detectada" value={formatUsd(t.oportunidad)} tone="amber" />
-        <Kpi icon={Percent} label="% capturado" value={formatPct(t.captura)} />
+        <Kpi icon={Gauge} label="% capturado" value={formatPct(t.captura)} />
         <Kpi icon={Users} label="Clientes activos" value={String(t.clientes)} />
       </div>
 
@@ -608,16 +620,31 @@ function Inicio() {
         </div>
       </section>
 
-      <section className="card">
-        <h2 className="font-display text-[15px] font-semibold text-ink">Alertas y próximas acciones</h2>
-        <ul className="mt-3 space-y-2.5">
-          {alertas.map((line, i) => (
-            <li key={i} className="flex items-start gap-2 text-[13px] text-ink-soft">
-              <Clock size={15} className="mt-0.5 shrink-0 text-amber" />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
+      <section>
+        <h2 className="mb-3 font-display text-[15px] font-semibold text-ink">
+          Alertas y próximas acciones
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {alertas.map((a, i) => {
+            const style =
+              a.nivel === "alta"
+                ? { border: "border-l-danger", chip: "bg-danger/10 text-danger", Icon: AlertTriangle }
+                : a.nivel === "media"
+                  ? { border: "border-l-amber", chip: "bg-amber/10 text-amber", Icon: Clock }
+                  : { border: "border-l-primary", chip: "bg-primary/10 text-primary", Icon: Info };
+            return (
+              <div key={i} className={`card flex items-start gap-3 border-l-4 ${style.border}`}>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style.chip}`}>
+                  <style.Icon size={18} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-ink">{a.titulo}</p>
+                  <p className="text-[12px] leading-snug text-ink-soft">{a.detalle}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
     </div>
   );
@@ -1286,15 +1313,26 @@ export function Dashboard() {
           >
             CHAJÁ
           </span>
+          <button
+            onClick={toggleSidebar}
+            aria-label="Colapsar menú"
+            className={`ml-auto items-center justify-center rounded-lg p-1.5 text-white/55 transition-colors hover:bg-white/10 hover:text-white ${
+              collapsed ? "hidden" : "hidden md:flex"
+            }`}
+          >
+            <PanelLeftClose size={18} />
+          </button>
         </div>
 
-        <button
-          onClick={toggleSidebar}
-          aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-          className="mx-2 mb-1 hidden items-center justify-center rounded-xl py-2 text-white/55 transition-colors hover:bg-white/10 hover:text-white md:flex"
-        >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
+        {collapsed && (
+          <button
+            onClick={toggleSidebar}
+            aria-label="Expandir menú"
+            className="mx-2 mb-1 hidden items-center justify-center rounded-xl py-2 text-white/55 transition-colors hover:bg-white/10 hover:text-white md:flex"
+          >
+            <PanelLeftOpen size={18} />
+          </button>
+        )}
 
         <nav className="mt-1 flex-1 space-y-1 px-2">
           {NAV.map((n) => {
@@ -1342,9 +1380,20 @@ export function Dashboard() {
                 {pend} sin sincronizar
               </span>
             )}
-            <span className="flex items-center gap-1.5 rounded-pill bg-primary-tint px-3 py-1.5 text-[12px] font-medium text-primary-dark">
-              <Eye size={14} /> Vista del dueño
-            </span>
+            <div className="flex items-center gap-2.5">
+              <div className="text-right leading-tight">
+                <p className="text-[13px] font-semibold text-ink">{user.nombre}</p>
+                <p className="text-[11px] capitalize text-ink-muted">{user.rol}</p>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-white">
+                {user.nombre
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+            </div>
           </div>
         </header>
         <main key={`${section}-${dataVersion}`} className="fade-in flex-1 overflow-y-auto p-6">

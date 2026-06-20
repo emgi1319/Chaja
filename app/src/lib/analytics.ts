@@ -297,6 +297,65 @@ export function proximaAccion(etapa: string | null): string {
   return etapa ? (PROXIMA_ACCION[etapa] ?? "Definir próximo paso") : "Iniciar contacto";
 }
 
+export interface AlertaPanel {
+  nivel: "alta" | "media" | "info";
+  titulo: string;
+  detalle: string;
+}
+
+export function alertasPanel(): AlertaPanel[] {
+  const rows = productoresRows();
+  const notas = notasCampo.list();
+  const out: AlertaPanel[] = [];
+
+  const porOportunidad = [...rows]
+    .filter((r) => r.oportunidad > 0)
+    .sort((a, b) => b.oportunidad - a.oportunidad)[0];
+  if (porOportunidad) {
+    out.push({
+      nivel: "alta",
+      titulo: "Oportunidad sin capturar",
+      detalle: `${porOportunidad.productor.razonSocial} tiene ${formatUsd(porOportunidad.oportunidad)} de potencial todavía sin vender.`,
+    });
+  }
+
+  const sinSeguimiento = rows.filter(
+    (r) => !notas.some((n) => n.productorId === r.productor.id),
+  );
+  if (sinSeguimiento.length > 0) {
+    const nombres = sinSeguimiento.slice(0, 2).map((r) => r.productor.razonSocial).join(", ");
+    out.push({
+      nivel: "media",
+      titulo: "Clientes sin seguimiento",
+      detalle: `${sinSeguimiento.length} cliente(s) sin actividad registrada: ${nombres}${sinSeguimiento.length > 2 ? "…" : ""}.`,
+    });
+  }
+
+  const bajaCaptura = [...rows]
+    .filter((r) => r.potencial > 0)
+    .sort((a, b) => a.captura - b.captura)[0];
+  if (bajaCaptura && bajaCaptura.captura < 0.6) {
+    out.push({
+      nivel: "media",
+      titulo: "Baja captura",
+      detalle: `${bajaCaptura.productor.razonSocial} está en ${formatPct(bajaCaptura.captura)} de su potencial — conviene visitarlo.`,
+    });
+  }
+
+  const enProceso = notas.filter((n) =>
+    ["presupuesto", "negociacion", "en_proceso"].includes(n.actividad),
+  ).length;
+  if (enProceso > 0) {
+    out.push({
+      nivel: "info",
+      titulo: "Negociaciones abiertas",
+      detalle: `${enProceso} operación(es) en proceso o con presupuesto enviado para seguir.`,
+    });
+  }
+
+  return out;
+}
+
 export function alertasCartera(): string[] {
   const rows = productoresRows().filter((r) => r.potencial > 0);
   const out: string[] = [];
