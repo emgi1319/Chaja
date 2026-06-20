@@ -27,3 +27,8 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# Assets de trabajo (no versionar)
+logo a tratar.png
+*.psd
+*.ai
