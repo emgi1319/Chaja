@@ -14,8 +14,6 @@ import {
   Clock,
   ArrowLeft,
   Plus,
-  MapPin,
-  Phone,
   Filter,
   Boxes,
   UserPlus,
@@ -29,6 +27,7 @@ import {
   Gauge,
   AlertTriangle,
   Info,
+  Sprout,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
@@ -39,14 +38,12 @@ import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import {
   CULTIVOS,
-  ESTADOS_PROCESO,
   ESTADOS_REFERIDO,
   ESTADO_PROCESO_LABEL,
   ESTADO_OPERACION_LABEL,
   type Cultivo,
   type EstadoOperacion,
   type EstadoProceso,
-  type NotaCampo,
   type Referido,
 } from "../types";
 import {
@@ -556,16 +553,26 @@ function Inicio() {
   const alertas = alertasPanel();
   const ranking = vendedoresResumen();
   const maxFact = Math.max(1, ...ranking.map((v) => v.facturado));
+  const [nuevoOpen, setNuevoOpen] = useState(false);
+  const refresh = useApp((s) => s.refresh);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-[18px] font-semibold text-ink">
-          Panel de la campaña {getNombreCampania()}
-        </h2>
-        <p className="text-[13px] text-ink-muted">
-          Cómo viene la campaña y dónde están las oportunidades de tu cartera.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-[18px] font-semibold text-ink">
+            Panel de la campaña {getNombreCampania()}
+          </h2>
+          <p className="text-[13px] text-ink-muted">
+            Cómo viene la campaña y dónde están las oportunidades de tu cartera.
+          </p>
+        </div>
+        <button
+          onClick={() => setNuevoOpen(true)}
+          className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+        >
+          <Plus size={17} /> Nuevo cliente
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -646,6 +653,15 @@ function Inicio() {
           })}
         </div>
       </section>
+
+      <Drawer open={nuevoOpen} onClose={() => setNuevoOpen(false)} title="Nuevo cliente">
+        <ClienteForm
+          onSaved={() => {
+            setNuevoOpen(false);
+            void refresh();
+          }}
+        />
+      </Drawer>
     </div>
   );
 }
@@ -660,13 +676,11 @@ function formatFecha(iso?: string): string {
 }
 
 function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
-  const [, bump] = useState(0);
   const productor = productores.get(id);
   const row = productoresRows().find((r) => r.productor.id === id);
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
-  const [actividad, setActividad] = useState<EstadoProceso>("inicio_contacto");
-  const [nota, setNota] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
+  const [actOpen, setActOpen] = useState(false);
+  const [, bump] = useState(0);
 
   if (!productor || !row) return null;
 
@@ -674,27 +688,26 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
     .list()
     .filter((n) => n.productorId === id)
     .sort((a, b) => new Date(b.fechaContacto).getTime() - new Date(a.fechaContacto).getTime());
-
-  const primera = notas[notas.length - 1];
-  const venta = notas.find((n) => n.actividad === "venta");
   const cultivos = productor.unidades.flatMap((u) => u.cultivos);
-
-  const agregar = async () => {
-    setSaving(true);
-    const nueva: NotaCampo = {
-      id: newId(),
-      fechaContacto: new Date(`${fecha}T12:00:00`).toISOString(),
-      productorId: id,
-      productorNombre: productor.razonSocial,
-      actividad,
-      notaVisita: nota,
-      updatedAt: Date.now(),
-    };
-    await notasCampo.save(nueva);
-    setNota("");
-    setSaving(false);
-    bump((v) => v + 1);
-  };
+  const inicial = productor.razonSocial
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const meta = [
+    productor.localidad,
+    row.hectareas ? `${row.hectareas} ha` : null,
+    productor.vendedor ? `Vendedor: ${productor.vendedor}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const kpis: { label: string; value: string; tone?: "amber" }[] = [
+    { label: "Valor potencial", value: formatUsd(row.potencial) },
+    { label: "Facturado ciclo anterior", value: formatUsd(row.facturado) },
+    { label: "Oportunidad", value: formatUsd(row.oportunidad), tone: "amber" },
+    { label: "% capturado", value: formatPct(row.captura) },
+  ];
 
   return (
     <div className="space-y-5">
@@ -705,175 +718,135 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
         <ArrowLeft size={16} /> Volver a clientes
       </button>
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-4">
-          <section className="card">
-            <h2 className="font-display text-[17px] font-semibold text-ink">
-              {productor.razonSocial}
-            </h2>
-            <div className="mt-2 space-y-1.5 text-[13px] text-ink-soft">
-              {productor.localidad && (
-                <p className="flex items-center gap-2">
-                  <MapPin size={14} className="text-ink-muted" />
-                  {productor.localidad}
-                </p>
-              )}
-              {(productor.celular || productor.telefono) && (
-                <p className="flex items-center gap-2">
-                  <Phone size={14} className="text-ink-muted" />
-                  {productor.celular || productor.telefono}
-                </p>
-              )}
-              {productor.email && <p className="text-ink-muted">{productor.email}</p>}
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-line pt-3 text-[12px]">
-              <div>
-                <p className="text-ink-muted">Potencial</p>
-                <p className="font-semibold text-accent">{formatUsd(row.potencial)}</p>
-              </div>
-              <div>
-                <p className="text-ink-muted">Facturado</p>
-                <p className="font-semibold text-ink">{formatUsd(row.facturado)}</p>
-              </div>
-              <div>
-                <p className="text-ink-muted">Oportunidad</p>
-                <p className="font-semibold text-amber">{formatUsd(row.oportunidad)}</p>
-              </div>
-              <div>
-                <p className="text-ink-muted">Captura</p>
-                <p className="font-semibold text-ink">{formatPct(row.captura)}</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="card text-[13px]">
-            <h3 className="font-display text-[14px] font-semibold text-ink">Fechas clave</h3>
-            <dl className="mt-2 space-y-1.5">
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">Primer contacto</dt>
-                <dd className="text-ink-soft">{formatFecha(primera?.fechaContacto)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">Última actividad</dt>
-                <dd className="text-ink-soft">{formatFecha(notas[0]?.fechaContacto)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">Estado actual</dt>
-                <dd className="font-medium text-ink">
-                  {notas[0] ? ESTADO_PROCESO_LABEL[notas[0].actividad] : "—"}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">Cierre / venta</dt>
-                <dd className="text-ink-soft">{formatFecha(venta?.fechaContacto)}</dd>
-              </div>
-            </dl>
-          </section>
-
-          {cultivos.length > 0 && (
-            <section className="card text-[13px]">
-              <h3 className="font-display text-[14px] font-semibold text-ink">Cultivos</h3>
-              <table className="mt-2 w-full">
-                <tbody>
-                  {cultivos.map((c) => (
-                    <tr key={c.id} className="border-t border-line first:border-0">
-                      <td className="py-1.5 text-ink-soft">
-                        {c.cultivo}
-                        <span className="text-ink-muted"> · {c.superficieHa} ha</span>
-                      </td>
-                      <td className="py-1.5 text-right font-semibold text-accent">
-                        {formatUsd(valorCultivo(c))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-tint text-[15px] font-bold text-primary-dark">
+            {inicial}
+          </div>
+          <div>
+            <h2 className="font-display text-[18px] font-semibold text-ink">{productor.razonSocial}</h2>
+            <p className="text-[13px] text-ink-soft">{meta || "—"}</p>
+          </div>
         </div>
-
-        <div className="space-y-4 lg:col-span-2">
-          <section className="card">
-            <h3 className="font-display text-[14px] font-semibold text-ink">Registrar actividad</h3>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1.5">
-                <span className="label">Fecha</span>
-                <input
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="field"
-                />
-              </label>
-              <Dropdown
-                label="Actividad"
-                value={actividad}
-                onChange={setActividad}
-                options={ESTADOS_PROCESO.map((e) => ({ value: e, label: ESTADO_PROCESO_LABEL[e] }))}
-              />
-            </div>
-            <label className="mt-3 block space-y-1.5">
-              <span className="label">Nota</span>
-              <textarea
-                value={nota}
-                onChange={(e) => setNota(e.target.value)}
-                rows={2}
-                placeholder="Qué se habló o acordó"
-                className="field"
-              />
-            </label>
-            <button
-              onClick={agregar}
-              disabled={saving}
-              className="press mt-3 rounded-2xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:bg-disabled"
-            >
-              <span className="flex items-center gap-1.5">
-                <Plus size={16} /> Agregar al historial
-              </span>
-            </button>
-          </section>
-
-          <section className="card">
-            <h3 className="font-display text-[14px] font-semibold text-ink">Historial</h3>
-            {notas.length === 0 ? (
-              <p className="mt-2 text-[13px] text-ink-muted">Sin actividades registradas todavía.</p>
-            ) : (
-              <ol className="mt-3">
-                {notas.map((n, i) => (
-                  <li key={n.id} className="flex gap-3 pb-4 last:pb-0">
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                          n.actividad === "venta"
-                            ? "bg-accent"
-                            : n.actividad === "no_venta"
-                              ? "bg-danger"
-                              : "bg-primary"
-                        }`}
-                      />
-                      {i < notas.length - 1 && <span className="w-px flex-1 bg-line" />}
-                    </div>
-                    <div className="-mt-0.5 flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-semibold text-ink">
-                          {ESTADO_PROCESO_LABEL[n.actividad]}
-                        </span>
-                        <span className="text-[11px] text-ink-muted">
-                          {formatFecha(n.fechaContacto)}
-                        </span>
-                      </div>
-                      {n.notaVisita && <p className="text-[12px] text-ink-soft">{n.notaVisita}</p>}
-                      {!n.synced && (
-                        <span className="text-[10px] text-amber">pendiente de sincronizar</span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setHistOpen(true)}
+            className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
+          >
+            <Clock size={16} /> Historial
+          </button>
+          <button
+            onClick={() => setActOpen(true)}
+            className="press flex items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+          >
+            <Plus size={16} /> Cargar actividad
+          </button>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.label} className="card">
+            <p className="text-[12px] text-ink-muted">{k.label}</p>
+            <p
+              className={`mt-1 font-display text-[24px] font-bold ${
+                k.tone === "amber" ? "text-amber" : "text-ink"
+              }`}
+            >
+              {k.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 rounded-2xl bg-amber/10 px-5 py-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber/15">
+          <Target size={24} className="text-amber" />
+        </div>
+        <div>
+          <p className="text-[12px] font-medium text-amber">
+            Objetivo de venta sugerido para esta campaña
+          </p>
+          <p className="font-display text-[20px] font-bold text-ink">
+            {formatUsd(row.oportunidad)} a capturar
+          </p>
+        </div>
+      </div>
+
+      {cultivos.length > 0 && (
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-ink-muted">Por cultivo</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {cultivos.map((c) => {
+              const pot = valorCultivo(c);
+              const fact = facturadoCultivo(c);
+              const op = oportunidadCultivo(c);
+              const cap = pot > 0 ? (fact / pot) * 100 : 0;
+              return (
+                <div key={c.id} className="card">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
+                      <Sprout size={16} className="text-accent" /> {c.cultivo}
+                    </span>
+                    <span className="text-[12px] text-ink-muted">{c.superficieHa} ha</span>
+                  </div>
+                  <p className="mt-1.5 text-[12px] text-ink-soft">
+                    Pot. {formatUsd(pot)} · Fact. {formatUsd(fact)}
+                  </p>
+                  <p className="text-[12px] text-ink-soft">Oportunidad {formatUsd(op)}</p>
+                  <div className="mt-2">
+                    <Bar pct={cap} tone="accent" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <Drawer open={histOpen} onClose={() => setHistOpen(false)} title="Historial">
+        {notas.length === 0 ? (
+          <p className="text-[13px] text-ink-muted">Sin actividades registradas todavía.</p>
+        ) : (
+          <ol>
+            {notas.map((n, i) => (
+              <li key={n.id} className="flex gap-3 pb-4 last:pb-0">
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                      n.actividad === "venta"
+                        ? "bg-accent"
+                        : n.actividad === "no_venta"
+                          ? "bg-danger"
+                          : "bg-primary"
+                    }`}
+                  />
+                  {i < notas.length - 1 && <span className="w-px flex-1 bg-line" />}
+                </div>
+                <div className="-mt-0.5 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-semibold text-ink">
+                      {ESTADO_PROCESO_LABEL[n.actividad]}
+                    </span>
+                    <span className="text-[11px] text-ink-muted">{formatFecha(n.fechaContacto)}</span>
+                  </div>
+                  {n.notaVisita && <p className="text-[12px] text-ink-soft">{n.notaVisita}</p>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Drawer>
+
+      <Drawer open={actOpen} onClose={() => setActOpen(false)} title="Cargar actividad">
+        <CargarActividad
+          productorId={id}
+          onSaved={() => {
+            setActOpen(false);
+            bump((v) => v + 1);
+          }}
+        />
+      </Drawer>
     </div>
   );
 }
@@ -1356,7 +1329,7 @@ export function Dashboard() {
         </nav>
 
         <div className="border-t border-white/10 p-3">
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${collapsed ? "justify-center" : ""}`}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold">
               {user.nombre.charAt(0).toUpperCase()}
             </div>
@@ -1364,7 +1337,11 @@ export function Dashboard() {
               <p className="truncate text-[13px] font-medium">{user.nombre}</p>
               <p className="text-[11px] capitalize text-white/55">{user.rol}</p>
             </div>
-            <button onClick={logout} aria-label="Salir" className="text-white/65 hover:text-white">
+            <button
+              onClick={logout}
+              aria-label="Salir"
+              className={`text-white/65 hover:text-white ${collapsed ? "hidden" : "hidden md:inline-flex"}`}
+            >
               <LogOut size={17} />
             </button>
           </div>

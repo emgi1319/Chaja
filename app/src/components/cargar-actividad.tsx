@@ -29,12 +29,18 @@ function num(s: string): number {
 
 type LineaPresup = { id: string; productoId: string; precio: string; cantidad: string };
 
-export function CargarActividad({ onSaved }: { onSaved?: () => void }) {
+export function CargarActividad({
+  onSaved,
+  productorId: initialId,
+}: {
+  onSaved?: () => void;
+  productorId?: string;
+}) {
   const catalogo = useApp((s) => s.catalogo);
   const user = useApp((s) => s.user);
   const lista = productores.list();
 
-  const [productorId, setProductorId] = useState(lista[0]?.id ?? "");
+  const [productorId, setProductorId] = useState(initialId ?? lista[0]?.id ?? "");
   const [cultivo, setCultivo] = useState("General");
   const [actividad, setActividad] = useState<EstadoProceso>("inicio_contacto");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
