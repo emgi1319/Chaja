@@ -27,8 +27,9 @@ export function Login() {
   return (
     <div className="screen justify-center px-7">
       <div className="fade-in-up flex flex-col items-center">
-        <img src="/chaja-logo.png" alt="CHAJÁ" className="h-28 w-auto" />
-        <p className="mt-3 text-[14px] text-ink-muted">Ingresá con tu usuario del sistema</p>
+        <img src="/chaja-logo.png" alt="CHAJÁ" className="h-24 w-auto" />
+        <h1 className="mt-2 font-display text-[24px] font-bold tracking-wide text-ink">CHAJÁ</h1>
+        <p className="mt-1 text-[14px] text-ink-muted">Ingresá con tu usuario del sistema</p>
       </div>
 
       <div className="fade-in-up mt-8 space-y-3" style={{ animationDelay: "80ms" }}>
