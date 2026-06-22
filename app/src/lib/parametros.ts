@@ -1,9 +1,10 @@
 import { fetchParametros, pushParametro } from "./api";
+import type { Campania } from "../types";
 
-// Parámetros globales que fija la gerencia. El costo por hectárea de cada cultivo
-// alimenta el cálculo de Valor Cliente (hectáreas x costo/ha); el objetivo y el
-// nombre de campaña configuran el panel. Se cachean localmente y se sincronizan
-// con el servidor cuando hay backend, para que todos los dispositivos vean lo mismo.
+// Parámetros globales que fija la gerencia/supervisor. El costo por hectárea de cada
+// cultivo alimenta el cálculo de Valor Cliente; el objetivo y el nombre de campaña
+// configuran el panel; el cronograma de campañas alimenta los semáforos del supervisor.
+// Se cachean localmente y se sincronizan con el servidor cuando hay backend.
 const DEFAULT_COSTOS: Record<string, number> = {
   Maíz: 418,
   Soja: 196,
@@ -14,6 +15,12 @@ const DEFAULT_COSTOS: Record<string, number> = {
 };
 const DEFAULT_OBJETIVO = 0;
 const DEFAULT_CAMPANIA = "2025/26";
+const DEFAULT_CAMPANIAS: Campania[] = [
+  { nombre: "Maíz 2025/26", inicio: "2025-09-01", cierre: "2026-05-31" },
+  { nombre: "Cebada 2026", inicio: "2026-05-01", cierre: "2026-06-25" },
+  { nombre: "Trigo 2026", inicio: "2026-04-15", cierre: "2026-07-31" },
+  { nombre: "Gruesa 2026/27", inicio: "2026-06-01", cierre: "2027-01-15" },
+];
 
 const KEY = "chaja.parametros";
 const LEGACY_COSTOS_KEY = "chaja.costos_ha";
@@ -22,6 +29,7 @@ export interface Config {
   costosHa: Record<string, number>;
   objetivoCampania: number;
   nombreCampania: string;
+  campanias: Campania[];
 }
 
 function migrateLegacy(): Config {
@@ -32,7 +40,12 @@ function migrateLegacy(): Config {
   } catch {
     // sin datos previos
   }
-  return { costosHa: costos, objetivoCampania: DEFAULT_OBJETIVO, nombreCampania: DEFAULT_CAMPANIA };
+  return {
+    costosHa: costos,
+    objetivoCampania: DEFAULT_OBJETIVO,
+    nombreCampania: DEFAULT_CAMPANIA,
+    campanias: DEFAULT_CAMPANIAS,
+  };
 }
 
 function readCache(): Config {
@@ -44,6 +57,7 @@ function readCache(): Config {
         costosHa: { ...DEFAULT_COSTOS, ...(c.costosHa ?? {}) },
         objetivoCampania: c.objetivoCampania ?? DEFAULT_OBJETIVO,
         nombreCampania: c.nombreCampania ?? DEFAULT_CAMPANIA,
+        campanias: c.campanias && c.campanias.length > 0 ? c.campanias : DEFAULT_CAMPANIAS,
       };
     }
   } catch {
@@ -76,6 +90,10 @@ export function getNombreCampania(): string {
   return readCache().nombreCampania;
 }
 
+export function getCampanias(): Campania[] {
+  return readCache().campanias;
+}
+
 export function setCostosHa(costos: Record<string, number>): void {
   const c = readCache();
   c.costosHa = costos;
@@ -97,6 +115,13 @@ export function setNombreCampania(s: string): void {
   void pushParametro("nombre_campania", s);
 }
 
+export function setCampanias(camps: Campania[]): void {
+  const c = readCache();
+  c.campanias = camps;
+  writeCache(c);
+  void pushParametro("campanias", camps);
+}
+
 // Trae los parámetros del servidor y refresca el cache local.
 export async function loadParametros(): Promise<void> {
   const remote = await fetchParametros();
@@ -110,6 +135,9 @@ export async function loadParametros(): Promise<void> {
   }
   if (typeof remote["nombre_campania"] === "string") {
     c.nombreCampania = remote["nombre_campania"] as string;
+  }
+  if (Array.isArray(remote["campanias"]) && (remote["campanias"] as Campania[]).length > 0) {
+    c.campanias = remote["campanias"] as Campania[];
   }
   writeCache(c);
 }

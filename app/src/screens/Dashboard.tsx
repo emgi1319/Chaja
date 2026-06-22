@@ -26,6 +26,8 @@ import {
   AlertTriangle,
   Info,
   Sprout,
+  Activity,
+  Calendar,
 } from "lucide-react";
 import { useApp } from "../store";
 import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
@@ -39,6 +41,7 @@ import {
   ESTADOS_REFERIDO,
   ESTADO_PROCESO_LABEL,
   ESTADO_OPERACION_LABEL,
+  type Campania,
   type Cultivo,
   type EstadoOperacion,
   type EstadoProceso,
@@ -57,6 +60,9 @@ import {
   alertasPanel,
   vendedoresResumen,
   proximaAccion,
+  supervisorVendedores,
+  supervisorStats,
+  campEstado,
 } from "../lib/analytics";
 import {
   formatUsd,
@@ -72,6 +78,8 @@ import {
   getNombreCampania,
   setObjetivoCampania,
   setNombreCampania,
+  getCampanias,
+  setCampanias,
 } from "../lib/parametros";
 
 type Section =
@@ -85,7 +93,8 @@ type Section =
   | "productos"
   | "valorcliente"
   | "parametros"
-  | "reportes";
+  | "reportes"
+  | "supervisor";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
@@ -99,6 +108,29 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "valorcliente", label: "Valor cliente", icon: Calculator },
   { key: "parametros", label: "Parámetros", icon: Sliders },
   { key: "reportes", label: "Reportes", icon: BarChart3 },
+  { key: "supervisor", label: "Panel supervisor", icon: Activity },
+];
+
+// Secciones visibles por perfil (el gerente ve todo). El supervisor no carga
+// clientes ni actividad; el vendedor no ve equipo, reportes ni parámetros.
+const RAIL_VEND: Section[] = [
+  "inicio",
+  "clientes",
+  "valorcliente",
+  "actividad",
+  "seguimiento",
+  "operaciones",
+  "referidos",
+  "productos",
+];
+const RAIL_SUP: Section[] = [
+  "inicio",
+  "seguimiento",
+  "operaciones",
+  "reportes",
+  "supervisor",
+  "equipo",
+  "productos",
 ];
 
 const SECTION_TITLE: Record<Section, string> = {
@@ -113,6 +145,7 @@ const SECTION_TITLE: Record<Section, string> = {
   valorcliente: "Valor cliente",
   parametros: "Parámetros",
   reportes: "Reportes",
+  supervisor: "Panel del supervisor",
 };
 
 const REF_LABEL: Record<string, string> = {
@@ -559,6 +592,7 @@ function Inicio() {
   const maxFact = Math.max(1, ...ranking.map((v) => v.facturado));
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const refresh = useApp((s) => s.refresh);
+  const user = useApp((s) => s.user);
 
   return (
     <div className="space-y-6">
@@ -571,12 +605,14 @@ function Inicio() {
             Cómo viene la campaña y dónde están las oportunidades de tu cartera.
           </p>
         </div>
-        <button
-          onClick={() => setNuevoOpen(true)}
-          className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
-        >
-          <Plus size={17} /> Nuevo cliente
-        </button>
+        {user?.rol !== "supervisor" && (
+          <button
+            onClick={() => setNuevoOpen(true)}
+            className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+          >
+            <Plus size={17} /> Nuevo cliente
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -1130,16 +1166,20 @@ function Parametros() {
   const [costos, setCostos] = useState<Record<string, number>>(cfg.costosHa);
   const [objetivo, setObjetivo] = useState<number>(cfg.objetivoCampania);
   const [nombre, setNombre] = useState<string>(cfg.nombreCampania);
+  const [campanias, setCamps] = useState<Campania[]>(cfg.campanias.map((c) => ({ ...c })));
   const [saved, setSaved] = useState(false);
+  const patchCamp = (i: number, p: Partial<Campania>) =>
+    setCamps((cs) => cs.map((c, n) => (n === i ? { ...c, ...p } : c)));
   const guardar = () => {
     setCostosHa(costos);
     setObjetivoCampania(objetivo);
     setNombreCampania(nombre);
+    setCampanias(campanias.filter((c) => c.nombre.trim()));
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
   return (
-    <div className="max-w-lg space-y-4">
+    <div className="max-w-2xl space-y-4">
       <div className="card space-y-3">
         <p className="font-display text-[14px] font-semibold text-ink">Campaña</p>
         <label className="flex items-center justify-between gap-3">
@@ -1187,6 +1227,53 @@ function Parametros() {
           </div>
         ))}
       </div>
+
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="font-display text-[14px] font-semibold text-ink">Cronograma de campañas</p>
+          <button
+            type="button"
+            onClick={() => setCamps((cs) => [...cs, { nombre: "", inicio: "", cierre: "" }])}
+            className="flex items-center gap-1 text-[13px] font-semibold text-primary"
+          >
+            <Plus size={15} /> Agregar campaña
+          </button>
+        </div>
+        <p className="text-[12px] text-ink-muted">
+          Las fechas de cada campaña alimentan los semáforos del panel del supervisor.
+        </p>
+        {campanias.map((c, i) => (
+          <div key={i} className="grid grid-cols-12 items-center gap-2">
+            <input
+              value={c.nombre}
+              onChange={(e) => patchCamp(i, { nombre: e.target.value })}
+              placeholder="Ej.: Trigo 2026"
+              className="col-span-5 rounded-lg bg-surface px-2 py-2 text-[13px] outline-none"
+            />
+            <input
+              type="date"
+              value={c.inicio}
+              onChange={(e) => patchCamp(i, { inicio: e.target.value })}
+              className="col-span-3 rounded-lg bg-surface px-2 py-2 text-[12px] outline-none"
+            />
+            <input
+              type="date"
+              value={c.cierre}
+              onChange={(e) => patchCamp(i, { cierre: e.target.value })}
+              className="col-span-3 rounded-lg bg-surface px-2 py-2 text-[12px] outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setCamps((cs) => cs.filter((_, n) => n !== i))}
+              aria-label="Quitar campaña"
+              className="col-span-1 flex justify-center text-ink-muted hover:text-danger"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       <button
         onClick={guardar}
         className="press rounded-2xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark"
@@ -1442,10 +1529,113 @@ function ValorClienteScreen() {
   );
 }
 
+const SEM_STYLE: Record<string, { dot: string; chip: string }> = {
+  verde: { dot: "bg-accent", chip: "bg-accent/10 text-accent-dark" },
+  amarillo: { dot: "bg-amber", chip: "bg-amber/15 text-amber" },
+  rojo: { dot: "bg-danger", chip: "bg-danger/10 text-danger" },
+  gris: { dot: "bg-ink-muted", chip: "bg-surface text-ink-muted" },
+};
+
+function PanelSupervisor({ onParametros }: { onParametros: () => void }) {
+  const camps = getCampanias();
+  const stats = supervisorStats();
+  const vend = supervisorVendedores();
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13px] text-ink-muted">
+          Cronograma de campañas y seguimiento de los vendedores según el paso del tiempo.
+        </p>
+        <button
+          onClick={onParametros}
+          className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          <Sliders size={16} /> Parámetros
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi icon={Calendar} label="Campañas" value={String(stats.campanias)} />
+        <Kpi icon={Activity} label="En curso" value={String(stats.enCurso)} tone="accent" />
+        <Kpi icon={UserCheck} label="Vendedores al día" value={String(stats.aldia)} tone="accent" />
+        <Kpi icon={AlertTriangle} label="En alerta" value={String(stats.alerta)} tone="amber" />
+      </div>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Cronograma de campañas</h2>
+        <div className="mt-3 space-y-4">
+          {camps.map((c) => {
+            const e = campEstado(c);
+            const bar =
+              e.kind === "verde"
+                ? "bg-accent"
+                : e.kind === "amarillo"
+                  ? "bg-amber"
+                  : e.kind === "rojo"
+                    ? "bg-danger"
+                    : "bg-ink-muted";
+            return (
+              <div key={c.nombre}>
+                <div className="mb-1 flex items-center justify-between text-[13px]">
+                  <span className="font-medium text-ink">{c.nombre}</span>
+                  <span className="text-[12px] text-ink-muted">
+                    {formatFecha(c.inicio)} — {formatFecha(c.cierre)}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-pill bg-surface">
+                  <div className={`h-2 rounded-pill ${bar}`} style={{ width: `${e.pct}%` }} />
+                </div>
+                <div className="mt-1.5">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[11px] font-medium ${SEM_STYLE[e.kind].chip}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${SEM_STYLE[e.kind].dot}`} /> {e.label} ·{" "}
+                    {e.pct}% del tiempo
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <div>
+        <p className="mb-2 text-[13px] font-medium text-ink-muted">
+          Actividad de vendedores — semáforo
+        </p>
+        <TableShell head={["Vendedor", "Campaña", "Tiempo", "Avance", "Estado"]}>
+          {vend.map((v) => (
+            <tr key={v.vendedor} className="border-t border-line">
+              <td className="px-4 py-3 font-medium text-ink">{v.vendedor}</td>
+              <td className="px-4 py-3 text-right text-ink-soft">{v.campania}</td>
+              <td className="px-4 py-3 text-right text-ink-soft">{v.tiempo}%</td>
+              <td className="px-4 py-3 text-right text-ink-soft">{v.avance}%</td>
+              <td className="px-4 py-3 text-right">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[12px] font-medium ${SEM_STYLE[v.kind].chip}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${SEM_STYLE[v.kind].dot}`} /> {v.label}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </TableShell>
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const user = useApp((s) => s.user)!;
   const logout = useApp((s) => s.logout);
-  const [section, setSection] = useState<Section>("inicio");
+  const [section, setSection] = useState<Section>(
+    user.rol === "supervisor" ? "supervisor" : "inicio",
+  );
+  const allowed: Section[] =
+    user.rol === "vendedor" ? RAIL_VEND : user.rol === "supervisor" ? RAIL_SUP : NAV.map((n) => n.key);
+  const visibleNav = allowed
+    .map((k) => NAV.find((n) => n.key === k))
+    .filter(Boolean) as { key: Section; label: string; icon: typeof Users }[];
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("chaja.sidebar_collapsed") === "1",
   );
@@ -1497,7 +1687,7 @@ export function Dashboard() {
         )}
 
         <nav className="mt-1 flex-1 space-y-1 px-2">
-          {NAV.map((n) => {
+          {visibleNav.map((n) => {
             const active = n.key === section;
             return (
               <button
@@ -1574,6 +1764,9 @@ export function Dashboard() {
           {section === "valorcliente" && <ValorClienteScreen />}
           {section === "parametros" && <Parametros />}
           {section === "reportes" && <Reportes />}
+          {section === "supervisor" && (
+            <PanelSupervisor onParametros={() => setSection("parametros")} />
+          )}
         </main>
       </div>
     </div>

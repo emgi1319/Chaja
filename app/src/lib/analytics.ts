@@ -10,9 +10,11 @@ import {
 import {
   ESTADOS_PROCESO,
   ESTADO_PROCESO_LABEL,
+  type Campania,
   type EstadoProceso,
   type Productor,
 } from "../types";
+import { getCampanias } from "./parametros";
 
 export interface CarteraKpis {
   productores: number;
@@ -372,4 +374,77 @@ export function alertasCartera(): string[] {
     );
   }
   return out;
+}
+
+export type SemKind = "verde" | "amarillo" | "rojo" | "gris";
+
+export interface CampEstado {
+  pct: number;
+  kind: SemKind;
+  label: string;
+}
+
+export function campEstado(c: Campania, hoy: Date = new Date()): CampEstado {
+  const ini = new Date(c.inicio + "T00:00:00").getTime();
+  const cie = new Date(c.cierre + "T00:00:00").getTime();
+  const h = hoy.getTime();
+  const frac = cie > ini ? (h - ini) / (cie - ini) : 1;
+  const pct = Math.round(Math.max(0, Math.min(1, frac)) * 100);
+  if (h < ini) return { pct: 0, kind: "gris", label: "No iniciada" };
+  if (h > cie) return { pct: 100, kind: "rojo", label: "Vencida" };
+  if (frac >= 0.8) return { pct, kind: "amarillo", label: "Por vencer" };
+  return { pct, kind: "verde", label: "En curso" };
+}
+
+export interface SupervisorVendedorRow {
+  vendedor: string;
+  campania: string;
+  tiempo: number;
+  avance: number;
+  kind: SemKind;
+  label: string;
+}
+
+// Semáforo por vendedor: compara el avance de su cartera (captura) contra el
+// porcentaje de tiempo transcurrido de su campaña en curso.
+export function supervisorVendedores(): SupervisorVendedorRow[] {
+  const camps = getCampanias();
+  const enCurso = camps.filter((c) => {
+    const e = campEstado(c);
+    return e.kind === "verde" || e.kind === "amarillo";
+  });
+  const pool = enCurso.length > 0 ? enCurso : camps;
+  return vendedoresResumen().map((v, i) => {
+    const camp = pool.length > 0 ? pool[i % pool.length] : null;
+    const est = camp ? campEstado(camp) : null;
+    const tiempo = est ? est.pct : 0;
+    const avance = Math.round(v.captura * 100);
+    let kind: SemKind;
+    let label: string;
+    if (est && est.label === "Vencida" && avance < 100) {
+      kind = "rojo";
+      label = "Crítico";
+    } else if (avance >= tiempo) {
+      kind = "verde";
+      label = "Al día";
+    } else if (avance >= tiempo - 15) {
+      kind = "amarillo";
+      label = "Atrasado";
+    } else {
+      kind = "rojo";
+      label = "Crítico";
+    }
+    return { vendedor: v.vendedor, campania: camp?.nombre ?? "—", tiempo, avance, kind, label };
+  });
+}
+
+export function supervisorStats() {
+  const camps = getCampanias();
+  const enCurso = camps.filter((c) => {
+    const e = campEstado(c);
+    return e.kind === "verde" || e.kind === "amarillo";
+  }).length;
+  const vend = supervisorVendedores();
+  const aldia = vend.filter((v) => v.kind === "verde").length;
+  return { campanias: camps.length, enCurso, aldia, alerta: vend.length - aldia };
 }

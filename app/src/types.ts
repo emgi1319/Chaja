@@ -64,6 +64,12 @@ export interface Cultivo {
   insumos?: InsumoLinea[];
 }
 
+export interface Campania {
+  nombre: string;
+  inicio: string;
+  cierre: string;
+}
+
 export const CULTIVOS = ["Maíz", "Soja", "Trigo", "Girasol", "Cebada", "Sorgo"] as const;
 
 export interface UnidadProductiva {
