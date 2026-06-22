@@ -36,6 +36,7 @@ import { Dropdown, Field, PrimaryButton } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
+import { FormulaAgronomica } from "../components/formula-agronomica";
 import {
   CULTIVOS,
   ESTADOS_REFERIDO,
@@ -1163,6 +1164,7 @@ function Reportes() {
 
 function Parametros() {
   const cfg = getConfig();
+  const refresh = useApp((s) => s.refresh);
   const [costos, setCostos] = useState<Record<string, number>>(cfg.costosHa);
   const [objetivo, setObjetivo] = useState<number>(cfg.objetivoCampania);
   const [nombre, setNombre] = useState<string>(cfg.nombreCampania);
@@ -1180,6 +1182,7 @@ function Parametros() {
   };
   return (
     <div className="max-w-2xl space-y-4">
+      <FormulaAgronomica onSaved={() => void refresh()} />
       <div className="card space-y-3">
         <p className="font-display text-[14px] font-semibold text-ink">Campaña</p>
         <label className="flex items-center justify-between gap-3">

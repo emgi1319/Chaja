@@ -1,10 +1,11 @@
 import { fetchParametros, pushParametro } from "./api";
-import type { Campania } from "../types";
+import type { Campania, FormulaInsumo } from "../types";
 
-// Parámetros globales que fija la gerencia/supervisor. El costo por hectárea de cada
-// cultivo alimenta el cálculo de Valor Cliente; el objetivo y el nombre de campaña
-// configuran el panel; el cronograma de campañas alimenta los semáforos del supervisor.
-// Se cachean localmente y se sincronizan con el servidor cuando hay backend.
+// Parámetros globales que fija el supervisor. La fórmula agronómica define el costo
+// por hectárea de cada cultivo (suma de dosis x costo unitario de sus insumos); ese
+// costo/ha alimenta el Valor Cliente. El objetivo y el nombre de campaña configuran el
+// panel; el cronograma de campañas alimenta los semáforos. Se cachea localmente y se
+// sincroniza con el servidor cuando hay backend.
 const DEFAULT_COSTOS: Record<string, number> = {
   Maíz: 418,
   Soja: 196,
@@ -21,6 +22,23 @@ const DEFAULT_CAMPANIAS: Campania[] = [
   { nombre: "Trigo 2026", inicio: "2026-04-15", cierre: "2026-07-31" },
   { nombre: "Gruesa 2026/27", inicio: "2026-06-01", cierre: "2027-01-15" },
 ];
+const DEFAULT_FORMULA: FormulaInsumo[] = [
+  { cultivo: "Maíz", tipo: "Semilla", insumo: "Maíz híbrido", dosis: 1, unidad: "bolsa", costoUnit: 165 },
+  { cultivo: "Maíz", tipo: "Fertilizante", insumo: "Urea", dosis: 6, unidad: "bolsa", costoUnit: 28 },
+  { cultivo: "Maíz", tipo: "Herbicida", insumo: "Glifosato", dosis: 10, unidad: "L", costoUnit: 8.5 },
+  { cultivo: "Soja", tipo: "Semilla", insumo: "Soja + inoculante", dosis: 1, unidad: "bolsa", costoUnit: 90 },
+  { cultivo: "Soja", tipo: "Herbicida", insumo: "Glifosato", dosis: 8, unidad: "L", costoUnit: 8.5 },
+  { cultivo: "Soja", tipo: "Fungicida", insumo: "Azoxistrobina", dosis: 1, unidad: "L", costoUnit: 42 },
+  { cultivo: "Trigo", tipo: "Semilla", insumo: "Trigo", dosis: 1, unidad: "bolsa", costoUnit: 60 },
+  { cultivo: "Trigo", tipo: "Fertilizante", insumo: "Urea", dosis: 2, unidad: "bolsa", costoUnit: 28 },
+  { cultivo: "Girasol", tipo: "Semilla", insumo: "Girasol", dosis: 1, unidad: "bolsa", costoUnit: 120 },
+  { cultivo: "Girasol", tipo: "Herbicida", insumo: "Glifosato", dosis: 8, unidad: "L", costoUnit: 8.5 },
+  { cultivo: "Girasol", tipo: "Insecticida", insumo: "Cipermetrina", dosis: 2, unidad: "L", costoUnit: 19 },
+  { cultivo: "Cebada", tipo: "Semilla", insumo: "Cebada", dosis: 1, unidad: "bolsa", costoUnit: 70 },
+  { cultivo: "Cebada", tipo: "Fertilizante", insumo: "Urea", dosis: 4, unidad: "bolsa", costoUnit: 28 },
+  { cultivo: "Sorgo", tipo: "Semilla", insumo: "Sorgo", dosis: 1, unidad: "bolsa", costoUnit: 55 },
+  { cultivo: "Sorgo", tipo: "Fertilizante", insumo: "Urea", dosis: 4, unidad: "bolsa", costoUnit: 28 },
+];
 
 const KEY = "chaja.parametros";
 const LEGACY_COSTOS_KEY = "chaja.costos_ha";
@@ -30,6 +48,17 @@ export interface Config {
   objetivoCampania: number;
   nombreCampania: string;
   campanias: Campania[];
+  formula: FormulaInsumo[];
+}
+
+export function costosHaDesdeFormula(formula: FormulaInsumo[]): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const f of formula) {
+    if (!f.cultivo) continue;
+    m[f.cultivo] = (m[f.cultivo] || 0) + (f.dosis || 0) * (f.costoUnit || 0);
+  }
+  for (const k in m) m[k] = Math.round(m[k] * 100) / 100;
+  return m;
 }
 
 function migrateLegacy(): Config {
@@ -45,6 +74,7 @@ function migrateLegacy(): Config {
     objetivoCampania: DEFAULT_OBJETIVO,
     nombreCampania: DEFAULT_CAMPANIA,
     campanias: DEFAULT_CAMPANIAS,
+    formula: DEFAULT_FORMULA,
   };
 }
 
@@ -58,6 +88,7 @@ function readCache(): Config {
         objetivoCampania: c.objetivoCampania ?? DEFAULT_OBJETIVO,
         nombreCampania: c.nombreCampania ?? DEFAULT_CAMPANIA,
         campanias: c.campanias && c.campanias.length > 0 ? c.campanias : DEFAULT_CAMPANIAS,
+        formula: c.formula && c.formula.length > 0 ? c.formula : DEFAULT_FORMULA,
       };
     }
   } catch {
@@ -94,6 +125,10 @@ export function getCampanias(): Campania[] {
   return readCache().campanias;
 }
 
+export function getFormula(): FormulaInsumo[] {
+  return readCache().formula;
+}
+
 export function setCostosHa(costos: Record<string, number>): void {
   const c = readCache();
   c.costosHa = costos;
@@ -122,6 +157,16 @@ export function setCampanias(camps: Campania[]): void {
   void pushParametro("campanias", camps);
 }
 
+// Guarda la fórmula agronómica y aplica el costo/ha resultante a cada cultivo.
+export function setFormula(formula: FormulaInsumo[]): void {
+  const c = readCache();
+  c.formula = formula;
+  c.costosHa = { ...c.costosHa, ...costosHaDesdeFormula(formula) };
+  writeCache(c);
+  void pushParametro("formula", formula);
+  void pushParametro("costos_ha", c.costosHa);
+}
+
 // Trae los parámetros del servidor y refresca el cache local.
 export async function loadParametros(): Promise<void> {
   const remote = await fetchParametros();
@@ -138,6 +183,9 @@ export async function loadParametros(): Promise<void> {
   }
   if (Array.isArray(remote["campanias"]) && (remote["campanias"] as Campania[]).length > 0) {
     c.campanias = remote["campanias"] as Campania[];
+  }
+  if (Array.isArray(remote["formula"]) && (remote["formula"] as FormulaInsumo[]).length > 0) {
+    c.formula = remote["formula"] as FormulaInsumo[];
   }
   writeCache(c);
 }

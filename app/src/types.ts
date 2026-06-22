@@ -70,6 +70,17 @@ export interface Campania {
   cierre: string;
 }
 
+// Fila de la fórmula agronómica: un insumo del costo por hectárea de un cultivo.
+// El costo/ha de cada cultivo = suma de (dosis x costoUnit) de sus insumos.
+export interface FormulaInsumo {
+  cultivo: string;
+  tipo?: string;
+  insumo: string;
+  dosis: number;
+  unidad: string;
+  costoUnit: number;
+}
+
 export const CULTIVOS = ["Maíz", "Soja", "Trigo", "Girasol", "Cebada", "Sorgo"] as const;
 
 export interface UnidadProductiva {
