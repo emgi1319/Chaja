@@ -64,7 +64,7 @@ button {
     @apply focus:border-primary/40 focus:bg-white focus:ring-primary/10;
   }
   .label {
-    @apply font-display text-[14px] font-semibold text-ink;
+    @apply text-[13px] font-medium text-ink-soft;
   }
   .footer-actions {
     @apply px-5 pt-2;

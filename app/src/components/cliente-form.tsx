@@ -132,14 +132,17 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
         </p>
       </div>
 
-      <div className="flex items-center justify-between border-t border-line pt-3">
-        <span className="text-[14px] text-ink-muted">Valor cliente</span>
-        <span className="font-display text-[18px] font-bold text-accent">{formatUsd(valorTotal)}</span>
+      <div className="sticky bottom-0 -mx-5 -mb-4 space-y-2 border-t border-line bg-white px-5 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[14px] text-ink-muted">Valor cliente</span>
+          <span className="font-display text-[18px] font-bold text-accent">
+            {formatUsd(valorTotal)}
+          </span>
+        </div>
+        <PrimaryButton disabled={saving || !razonSocial.trim()} onClick={guardar}>
+          {saving ? "Guardando…" : "Guardar cliente"}
+        </PrimaryButton>
       </div>
-
-      <PrimaryButton disabled={saving || !razonSocial.trim()} onClick={guardar}>
-        {saving ? "Guardando…" : "Guardar cliente"}
-      </PrimaryButton>
     </div>
   );
 }

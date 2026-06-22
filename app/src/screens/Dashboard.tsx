@@ -135,7 +135,7 @@ const RAIL_SUP: Section[] = [
 ];
 
 const SECTION_TITLE: Record<Section, string> = {
-  inicio: "Resumen general",
+  inicio: "Inicio",
   clientes: "Clientes",
   seguimiento: "Seguimiento por cliente",
   operaciones: "Operaciones por producto",
@@ -598,14 +598,9 @@ function Inicio() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-[18px] font-semibold text-ink">
-            Panel de la campaña {getNombreCampania()}
-          </h2>
-          <p className="text-[13px] text-ink-muted">
-            Cómo viene la campaña y dónde están las oportunidades de tu cartera.
-          </p>
-        </div>
+        <p className="max-w-xl text-[13px] text-ink-muted">
+          Tu negocio comercial de un vistazo · Panel de campaña {getNombreCampania()}
+        </p>
         {user?.rol !== "supervisor" && (
           <button
             onClick={() => setNuevoOpen(true)}
