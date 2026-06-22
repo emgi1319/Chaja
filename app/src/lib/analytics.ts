@@ -303,8 +303,12 @@ export interface AlertaPanel {
   nivel: "alta" | "media" | "info";
   titulo: string;
   detalle: string;
+  origen: string;
+  clienteNombre?: string;
 }
 
+// Las alertas se DERIVAN automáticamente de la cartera y las reglas de negocio (no se
+// cargan a mano). Cada una expone su `origen` para que el panel explique de dónde sale.
 export function alertasPanel(): AlertaPanel[] {
   const rows = productoresRows();
   const notas = notasCampo.list();
@@ -318,6 +322,9 @@ export function alertasPanel(): AlertaPanel[] {
       nivel: "alta",
       titulo: "Oportunidad sin capturar",
       detalle: `${porOportunidad.productor.razonSocial} tiene ${formatUsd(porOportunidad.oportunidad)} de potencial todavía sin vender.`,
+      origen:
+        "Se genera con el cliente de mayor diferencia entre su potencial (fórmula agronómica) y lo facturado.",
+      clienteNombre: porOportunidad.productor.razonSocial,
     });
   }
 
@@ -330,6 +337,8 @@ export function alertasPanel(): AlertaPanel[] {
       nivel: "media",
       titulo: "Clientes sin seguimiento",
       detalle: `${sinSeguimiento.length} cliente(s) sin actividad registrada: ${nombres}${sinSeguimiento.length > 2 ? "…" : ""}.`,
+      origen: "Lista los clientes de la cartera que todavía no tienen ninguna actividad cargada.",
+      clienteNombre: sinSeguimiento[0].productor.razonSocial,
     });
   }
 
@@ -341,6 +350,8 @@ export function alertasPanel(): AlertaPanel[] {
       nivel: "media",
       titulo: "Baja captura",
       detalle: `${bajaCaptura.productor.razonSocial} está en ${formatPct(bajaCaptura.captura)} de su potencial — conviene visitarlo.`,
+      origen: "Se genera con el cliente de menor captura (facturado sobre potencial) por debajo del 60%.",
+      clienteNombre: bajaCaptura.productor.razonSocial,
     });
   }
 
@@ -352,6 +363,7 @@ export function alertasPanel(): AlertaPanel[] {
       nivel: "info",
       titulo: "Negociaciones abiertas",
       detalle: `${enProceso} operación(es) en proceso o con presupuesto enviado para seguir.`,
+      origen: "Cuenta las actividades en estado Presupuesto, Negociación o En proceso.",
     });
   }
 
@@ -447,4 +459,59 @@ export function supervisorStats() {
   const vend = supervisorVendedores();
   const aldia = vend.filter((v) => v.kind === "verde").length;
   return { campanias: camps.length, enCurso, aldia, alerta: vend.length - aldia };
+}
+
+const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+export interface PuntoMes {
+  mes: string;
+  facturado: number;
+  clientes: number;
+}
+
+// Serie de los últimos 4 meses (actual incluido) para los gráficos de evolución del
+// Inicio. Reparte el total con una curva creciente; es de ejemplo hasta que la
+// facturación quede registrada con fecha en el backend (ahí se enchufan los datos reales).
+export function serieMensual(hoy: Date = new Date()): PuntoMes[] {
+  const t = campaignTotals();
+  const pesosFact = [0.18, 0.24, 0.27, 0.31];
+  const pesosCli = [0.55, 0.7, 0.85, 1];
+  const out: PuntoMes[] = [];
+  for (let i = 3; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const idx = 3 - i;
+    out.push({
+      mes: MESES[d.getMonth()],
+      facturado: Math.round(t.facturado * pesosFact[idx]),
+      clientes: Math.max(0, Math.round(t.clientes * pesosCli[idx])),
+    });
+  }
+  return out;
+}
+
+export interface VendedorClienteRow {
+  nombre: string;
+  potencial: number;
+  facturado: number;
+  oportunidad: number;
+}
+
+export interface VendedorDetalle {
+  resumen: VendedorResumen;
+  clientes: VendedorClienteRow[];
+}
+
+export function vendedorDetalle(vendedor: string): VendedorDetalle | null {
+  const resumen = vendedoresResumen().find((v) => v.vendedor === vendedor);
+  if (!resumen) return null;
+  const clientes = productoresRows()
+    .filter((r) => (r.productor.vendedor || "Sin asignar") === vendedor)
+    .map((r) => ({
+      nombre: r.productor.razonSocial,
+      potencial: r.potencial,
+      facturado: r.facturado,
+      oportunidad: r.oportunidad,
+    }))
+    .sort((a, b) => b.potencial - a.potencial);
+  return { resumen, clientes };
 }

@@ -38,6 +38,14 @@ import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import {
+  InfoTip,
+  PanelFacturado,
+  PanelClientes,
+  PanelOportunidad,
+  PanelVendedor,
+  PanelAlerta,
+} from "../components/inicio-paneles";
+import {
   CULTIVOS,
   ESTADOS_REFERIDO,
   ESTADO_PROCESO_LABEL,
@@ -64,6 +72,8 @@ import {
   supervisorVendedores,
   supervisorStats,
   campEstado,
+  serieMensual,
+  type AlertaPanel,
 } from "../lib/analytics";
 import {
   formatUsd,
@@ -539,11 +549,15 @@ function Kpi({
   label,
   value,
   tone = "ink",
+  onClick,
+  tip,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
   tone?: "ink" | "accent" | "amber";
+  onClick?: () => void;
+  tip?: string;
 }) {
   const valueColor = tone === "accent" ? "text-accent" : tone === "amber" ? "text-amber" : "text-ink";
   const chip =
@@ -552,17 +566,28 @@ function Kpi({
       : tone === "amber"
         ? "bg-amber/10 text-amber"
         : "bg-primary/10 text-primary";
-  return (
-    <div className="card card-hover flex items-center gap-3.5">
+  const inner = (
+    <>
       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${chip}`}>
         <Icon size={22} strokeWidth={2} />
       </div>
       <div className="min-w-0">
-        <p className="text-[12px] text-ink-muted">{label}</p>
+        <p className="flex items-center gap-1 text-[12px] text-ink-muted">
+          {label}
+          {tip && <InfoTip texto={tip} />}
+        </p>
         <p className={`font-display text-[23px] font-bold leading-tight ${valueColor}`}>{value}</p>
       </div>
-    </div>
+    </>
   );
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="card card-hover flex w-full items-center gap-3.5 text-left">
+        {inner}
+      </button>
+    );
+  }
+  return <div className="card card-hover flex items-center gap-3.5">{inner}</div>;
 }
 
 function TableShell({ head, children }: { head: string[]; children: ReactNode }) {
@@ -594,6 +619,13 @@ function Inicio() {
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const refresh = useApp((s) => s.refresh);
   const user = useApp((s) => s.user);
+  const [panel, setPanel] = useState<
+    | null
+    | { tipo: "facturado" | "oportunidad" | "clientes" }
+    | { tipo: "vendedor"; nombre: string }
+    | { tipo: "alerta"; alerta: AlertaPanel }
+  >(null);
+  const serie = serieMensual();
 
   return (
     <div className="space-y-6">
@@ -612,10 +644,32 @@ function Inicio() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi icon={DollarSign} label="Facturado campaña" value={formatUsd(t.facturado)} />
-        <Kpi icon={TrendingUp} label="Oportunidad detectada" value={formatUsd(t.oportunidad)} tone="amber" />
-        <Kpi icon={Gauge} label="% capturado" value={formatPct(t.captura)} />
-        <Kpi icon={Users} label="Clientes activos" value={String(t.clientes)} />
+        <Kpi
+          icon={DollarSign}
+          label="Facturado campaña"
+          value={formatUsd(t.facturado)}
+          onClick={() => setPanel({ tipo: "facturado" })}
+        />
+        <Kpi
+          icon={TrendingUp}
+          label="Oportunidad detectada"
+          value={formatUsd(t.oportunidad)}
+          tone="amber"
+          onClick={() => setPanel({ tipo: "oportunidad" })}
+          tip="Potencial no capturado: el valor cliente total (fórmula agronómica) menos lo facturado."
+        />
+        <Kpi
+          icon={Gauge}
+          label="% capturado"
+          value={formatPct(t.captura)}
+          tip="Facturado sobre el potencial total de la cartera (lo que cada productor invertiría según la fórmula agronómica)."
+        />
+        <Kpi
+          icon={Users}
+          label="Clientes activos"
+          value={String(t.clientes)}
+          onClick={() => setPanel({ tipo: "clientes" })}
+        />
       </div>
 
       <section className="card">
@@ -632,8 +686,11 @@ function Inicio() {
       </section>
 
       <section className="card">
-        <h2 className="font-display text-[15px] font-semibold text-ink">Ranking de vendedores</h2>
-        <div className="mt-3 space-y-3">
+        <h2 className="flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
+          Ranking de vendedores
+          <InfoTip texto="Ordenado por facturación. El porcentaje es la captura del vendedor: facturado sobre el potencial de su cartera. Tocá un vendedor para ver el detalle." />
+        </h2>
+        <div className="mt-3 space-y-1">
           {ranking.map((v) => {
             const ini = v.vendedor
               .split(" ")
@@ -642,7 +699,11 @@ function Inicio() {
               .slice(0, 2)
               .toUpperCase();
             return (
-              <div key={v.vendedor} className="flex items-center gap-3">
+              <button
+                key={v.vendedor}
+                onClick={() => setPanel({ tipo: "vendedor", nombre: v.vendedor })}
+                className="flex w-full items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface"
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
                   {ini}
                 </div>
@@ -657,15 +718,16 @@ function Inicio() {
                     <Bar pct={(v.facturado / maxFact) * 100} />
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       </section>
 
       <section>
-        <h2 className="mb-3 font-display text-[15px] font-semibold text-ink">
+        <h2 className="mb-3 flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
           Alertas y próximas acciones
+          <InfoTip texto="Se generan automáticamente de tu cartera y las reglas del sistema. Tocá una para ver el detalle y de dónde sale." />
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {alertas.map((a, i) => {
@@ -676,7 +738,11 @@ function Inicio() {
                   ? { border: "border-l-amber", chip: "bg-amber/10 text-amber", Icon: Clock }
                   : { border: "border-l-primary", chip: "bg-primary/10 text-primary", Icon: Info };
             return (
-              <div key={i} className={`card flex items-start gap-3 border-l-4 ${style.border}`}>
+              <button
+                key={i}
+                onClick={() => setPanel({ tipo: "alerta", alerta: a })}
+                className={`card flex w-full items-start gap-3 border-l-4 text-left transition-colors hover:bg-surface ${style.border}`}
+              >
                 <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style.chip}`}>
                   <style.Icon size={18} />
                 </div>
@@ -684,11 +750,35 @@ function Inicio() {
                   <p className="text-[13px] font-semibold text-ink">{a.titulo}</p>
                   <p className="text-[12px] leading-snug text-ink-soft">{a.detalle}</p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       </section>
+
+      <Drawer
+        open={panel !== null}
+        onClose={() => setPanel(null)}
+        title={
+          panel?.tipo === "facturado"
+            ? "Facturado de campaña"
+            : panel?.tipo === "oportunidad"
+              ? "Oportunidad detectada"
+              : panel?.tipo === "clientes"
+                ? "Clientes activos"
+                : panel?.tipo === "vendedor"
+                  ? panel.nombre
+                  : panel?.tipo === "alerta"
+                    ? panel.alerta.titulo
+                    : ""
+        }
+      >
+        {panel?.tipo === "facturado" && <PanelFacturado serie={serie} />}
+        {panel?.tipo === "oportunidad" && <PanelOportunidad />}
+        {panel?.tipo === "clientes" && <PanelClientes serie={serie} />}
+        {panel?.tipo === "vendedor" && <PanelVendedor nombre={panel.nombre} />}
+        {panel?.tipo === "alerta" && <PanelAlerta alerta={panel.alerta} />}
+      </Drawer>
 
       <Drawer open={nuevoOpen} onClose={() => setNuevoOpen(false)} title="Nuevo cliente">
         <ClienteForm
