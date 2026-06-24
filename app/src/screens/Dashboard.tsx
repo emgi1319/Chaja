@@ -28,9 +28,21 @@ import {
   Sprout,
   Activity,
   Calendar,
+  History,
+  ArrowRight,
 } from "lucide-react";
 import { useApp } from "../store";
-import { notasCampo, operaciones, pendingTotal, productores, referidos, saveProducto } from "../lib/api";
+import {
+  notasCampo,
+  operaciones,
+  pendingTotal,
+  productores,
+  referidos,
+  saveProducto,
+  registrarAuditoria,
+  listarAuditoria,
+  type AuditoriaEvento,
+} from "../lib/api";
 import { newId } from "../lib/db";
 import { Dropdown, Field, PrimaryButton } from "../components/ui";
 import { Drawer } from "../components/drawer";
@@ -81,6 +93,7 @@ import {
   facturadoCultivo,
   oportunidadCultivo,
   inversionInsumo,
+  valorClienteTotal,
 } from "../lib/valor-cliente";
 import {
   setCostosHa,
@@ -105,7 +118,8 @@ type Section =
   | "valorcliente"
   | "parametros"
   | "reportes"
-  | "supervisor";
+  | "supervisor"
+  | "auditoria";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
@@ -120,6 +134,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "parametros", label: "Parámetros", icon: Sliders },
   { key: "reportes", label: "Reportes", icon: BarChart3 },
   { key: "supervisor", label: "Panel supervisor", icon: Activity },
+  { key: "auditoria", label: "Auditoría", icon: History },
 ];
 
 // Secciones visibles por perfil (el gerente ve todo). El supervisor no carga
@@ -157,6 +172,7 @@ const SECTION_TITLE: Record<Section, string> = {
   parametros: "Parámetros",
   reportes: "Reportes",
   supervisor: "Panel del supervisor",
+  auditoria: "Auditoría de cambios",
 };
 
 const REF_LABEL: Record<string, string> = {
@@ -1428,12 +1444,21 @@ function ValorClienteScreen() {
   const guardar = async () => {
     const productor = productores.get(id);
     if (!productor) return;
+    const antes = valorClienteTotal(productor);
     setSaving(true);
     await productores.save({
       ...productor,
       unidades: [{ id: productor.unidades[0]?.id ?? newId(), cultivos: rows }],
       updatedAt: Date.now(),
     });
+    if (Math.round(antes) !== Math.round(potencial)) {
+      void registrarAuditoria({
+        cliente: productor.razonSocial,
+        campo: "Valor Cliente",
+        valorAnterior: formatUsd(antes),
+        valorNuevo: formatUsd(potencial),
+      });
+    }
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -1614,6 +1639,42 @@ function ValorClienteScreen() {
         </button>
       </div>
     </div>
+  );
+}
+
+function Auditoria() {
+  const [rows, setRows] = useState<AuditoriaEvento[]>([]);
+  useEffect(() => {
+    void listarAuditoria().then(setRows);
+  }, []);
+  if (rows.length === 0) {
+    return (
+      <p className="text-[13px] text-ink-muted">
+        Sin cambios registrados todavía. Cada modificación del Valor Cliente queda asentada acá con
+        quién la hizo, cuándo, y el valor anterior y nuevo.
+      </p>
+    );
+  }
+  return (
+    <TableShell head={["Fecha", "Usuario", "Rol", "Cliente", "Cambio"]}>
+      {rows.map((e, i) => (
+        <tr key={e.id ?? i} className="border-t border-line">
+          <td className="px-4 py-3 text-ink-soft">
+            {e.fecha ? new Date(e.fecha).toLocaleString("es-AR") : "—"}
+          </td>
+          <td className="px-4 py-3 text-right font-medium text-ink">{e.usuario ?? "—"}</td>
+          <td className="px-4 py-3 text-right capitalize text-ink-soft">{e.rol ?? "—"}</td>
+          <td className="px-4 py-3 text-right text-ink-soft">{e.cliente ?? "—"}</td>
+          <td className="px-4 py-3 text-right">
+            <span className="inline-flex items-center gap-1.5 text-[12px]">
+              <span className="text-ink-muted">{e.valorAnterior}</span>
+              <ArrowRight size={13} className="text-ink-muted" />
+              <span className="font-semibold text-accent">{e.valorNuevo}</span>
+            </span>
+          </td>
+        </tr>
+      ))}
+    </TableShell>
   );
 }
 
@@ -1855,6 +1916,7 @@ export function Dashboard() {
           {section === "supervisor" && (
             <PanelSupervisor onParametros={() => setSection("parametros")} />
           )}
+          {section === "auditoria" && <Auditoria />}
         </main>
       </div>
     </div>

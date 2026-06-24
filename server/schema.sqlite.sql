@@ -79,3 +79,12 @@ CREATE TABLE IF NOT EXISTS parametros (
   valor TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS auditoria (
+  id TEXT PRIMARY KEY,
+  usuario TEXT NOT NULL,
+  fecha INTEGER NOT NULL,
+  data TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha);

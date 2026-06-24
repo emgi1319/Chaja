@@ -104,6 +104,31 @@ if ($name === 'parametros') {
     }
 }
 
+// Auditoría: log de cambios. Cualquier usuario registra (POST); solo gerencia lo lee (GET).
+if ($name === 'auditoria') {
+    if ($method === 'GET') {
+        if ($user['rol'] !== 'gerente') {
+            fail('solo gerencia', 403);
+        }
+        $rows = $pdo->query('SELECT data FROM auditoria ORDER BY fecha DESC LIMIT 300')->fetchAll();
+        out(array_map(fn ($r) => json_decode($r['data'], true), $rows));
+    }
+    if ($method === 'POST') {
+        $b = body();
+        $id = (string) ($b['id'] ?? bin2hex(random_bytes(8)));
+        $fecha = (int) ($b['fecha'] ?? round(microtime(true) * 1000));
+        $data = array_merge($b, [
+            'id' => $id,
+            'fecha' => $fecha,
+            'usuario' => $user['nombre'],
+            'rol' => $user['rol'],
+        ]);
+        $pdo->prepare('REPLACE INTO auditoria (id, usuario, fecha, data) VALUES (?, ?, ?, ?)')
+            ->execute([$id, $user['id'], $fecha, json_encode($data, JSON_UNESCAPED_UNICODE)]);
+        out(['ok' => true]);
+    }
+}
+
 // Colecciones: tabla, si se filtra por dueño, y columnas indexadas que se extraen del objeto
 $collections = [
     'productores' => ['table' => 'productores', 'owned' => true, 'cols' => ['razon_social' => 'razonSocial', 'localidad' => 'localidad']],

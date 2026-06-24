@@ -203,6 +203,35 @@ export async function pushParametro(clave: string, valor: unknown): Promise<void
   }
 }
 
+export interface AuditoriaEvento {
+  id?: string;
+  fecha?: number;
+  usuario?: string;
+  rol?: string;
+  cliente?: string;
+  campo?: string;
+  valorAnterior?: string;
+  valorNuevo?: string;
+}
+
+export async function registrarAuditoria(evento: AuditoriaEvento): Promise<void> {
+  if (!API_BASE) return;
+  try {
+    await request("/auditoria", { method: "POST", body: JSON.stringify(evento) });
+  } catch {
+    // el log de auditoría no bloquea la operación del usuario
+  }
+}
+
+export async function listarAuditoria(): Promise<AuditoriaEvento[]> {
+  if (!API_BASE) return [];
+  try {
+    return await request<AuditoriaEvento[]>("/auditoria");
+  } catch {
+    return [];
+  }
+}
+
 export function readUser(): User | null {
   return cacheGet<User>(USER_KEY);
 }
