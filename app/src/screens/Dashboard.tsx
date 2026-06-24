@@ -30,6 +30,7 @@ import {
   Calendar,
   History,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { useApp } from "../store";
 import {
@@ -49,6 +50,7 @@ import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
+import { exportarExcel } from "../lib/export";
 import {
   InfoTip,
   PanelFacturado,
@@ -256,6 +258,27 @@ function Operaciones() {
         <Kpi icon={Boxes} label="Operaciones" value={String(s.total)} />
         <Kpi icon={Target} label="Valor en juego" value={formatUsd(s.valorEnJuego)} tone="amber" />
         <Kpi icon={UserCheck} label="Ganadas" value={String(s.ganadas)} tone="accent" />
+      </div>
+      <div className="flex justify-end">
+        <button
+          onClick={() =>
+            void exportarExcel(
+              "operaciones",
+              ops.map((o) => ({
+                ID: o.id,
+                Cliente: o.productorNombre,
+                Cultivo: o.cultivo,
+                Producto: o.producto,
+                Valor: Math.round(o.valorPotencial),
+                Etapa: o.etapa,
+                Estado: o.estado,
+              })),
+            )
+          }
+          className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          <Download size={16} /> Exportar
+        </button>
       </div>
       <TableShell head={["Cliente", "Cultivo", "Producto", "Valor", "Etapa", "Estado"]}>
         {ops.map((o) => (
@@ -1079,6 +1102,26 @@ function Clientes() {
             className="w-full bg-transparent py-2.5 text-[14px] outline-none"
           />
         </div>
+        <button
+          onClick={() =>
+            void exportarExcel(
+              "clientes",
+              all.map((r) => ({
+                Cliente: r.productor.razonSocial,
+                Vendedor: r.productor.vendedor ?? "",
+                Localidad: r.productor.localidad ?? "",
+                Hectareas: r.hectareas,
+                "Valor potencial": Math.round(r.potencial),
+                Facturado: Math.round(r.facturado),
+                Oportunidad: Math.round(r.oportunidad),
+                "Captura %": Math.round(r.captura * 100),
+              })),
+            )
+          }
+          className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          <Download size={16} /> Exportar
+        </button>
         <button
           onClick={() => setNuevoOpen(true)}
           className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
