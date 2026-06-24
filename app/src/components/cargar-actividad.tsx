@@ -347,7 +347,7 @@ export function CargarActividad({
         />
       </label>
 
-      <div className="max-w-xs">
+      <div className="sm:max-w-xs">
         <PrimaryButton disabled={saved} onClick={guardar}>
           {saved ? "Guardada" : "Guardar actividad"}
         </PrimaryButton>

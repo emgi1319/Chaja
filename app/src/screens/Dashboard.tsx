@@ -615,26 +615,37 @@ function Kpi({
         : "bg-primary/10 text-primary";
   const inner = (
     <>
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${chip}`}>
-        <Icon size={22} strokeWidth={2} />
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl md:h-11 md:w-11 ${chip}`}>
+        <Icon size={20} strokeWidth={2} />
       </div>
-      <div className="min-w-0">
+      <div className="w-full min-w-0">
         <p className="flex items-center gap-1 text-[12px] text-ink-muted">
           {label}
           {tip && <InfoTip texto={tip} />}
         </p>
-        <p className={`font-display text-[23px] font-bold leading-tight ${valueColor}`}>{value}</p>
+        <p
+          className={`font-display text-[18px] font-bold leading-tight tabular-nums sm:text-[20px] md:text-[23px] ${valueColor}`}
+        >
+          {value}
+        </p>
       </div>
     </>
   );
   if (onClick) {
     return (
-      <button onClick={onClick} className="card card-hover flex w-full items-center gap-3.5 text-left">
+      <button
+        onClick={onClick}
+        className="card card-hover flex w-full flex-col items-start gap-2.5 text-left sm:flex-row sm:items-center sm:gap-3.5"
+      >
         {inner}
       </button>
     );
   }
-  return <div className="card card-hover flex items-center gap-3.5">{inner}</div>;
+  return (
+    <div className="card card-hover flex flex-col items-start gap-2.5 sm:flex-row sm:items-center sm:gap-3.5">
+      {inner}
+    </div>
+  );
 }
 
 function TableShell({ head, children }: { head: string[]; children: ReactNode }) {
@@ -1737,7 +1748,7 @@ function ValorClienteScreen() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
+              <table className="w-full min-w-[680px] text-[13px]">
                 <thead className="text-left text-[11px] uppercase tracking-wide text-ink-muted">
                   <tr>
                     <th className="px-2 py-1 font-medium">Producto</th>
