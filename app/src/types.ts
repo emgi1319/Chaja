@@ -70,6 +70,11 @@ export interface Campania {
   cierre: string;
 }
 
+export interface FacturacionMes {
+  periodo: string;
+  monto: number;
+}
+
 // Fila de la fórmula agronómica: un insumo del costo por hectárea de un cultivo.
 // El costo/ha de cada cultivo = suma de (dosis x costoUnit) de sus insumos.
 export interface FormulaInsumo {
@@ -120,6 +125,7 @@ export interface Productor extends Entity {
   facturacion2024?: number;
   facturacion2025?: number;
   unidades: UnidadProductiva[];
+  facturacionMensual?: FacturacionMes[];
   creadoPor?: string;
 }
 

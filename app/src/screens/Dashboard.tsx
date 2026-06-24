@@ -52,6 +52,7 @@ import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
+import { scoringCliente, facturacionTotal } from "../lib/scoring";
 import {
   InfoTip,
   PanelFacturado,
@@ -67,6 +68,7 @@ import {
   ESTADO_OPERACION_LABEL,
   type Campania,
   type Cultivo,
+  type FacturacionMes,
   type EstadoOperacion,
   type EstadoProceso,
   type InsumoLinea,
@@ -122,7 +124,8 @@ type Section =
   | "parametros"
   | "reportes"
   | "supervisor"
-  | "auditoria";
+  | "auditoria"
+  | "facturacion";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
@@ -138,6 +141,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "reportes", label: "Reportes", icon: BarChart3 },
   { key: "supervisor", label: "Panel supervisor", icon: Activity },
   { key: "auditoria", label: "Auditoría", icon: History },
+  { key: "facturacion", label: "Facturación", icon: DollarSign },
 ];
 
 // Secciones visibles por perfil (el gerente ve todo). El supervisor no carga
@@ -158,6 +162,7 @@ const RAIL_SUP: Section[] = [
   "operaciones",
   "reportes",
   "supervisor",
+  "facturacion",
   "equipo",
   "productos",
 ];
@@ -176,6 +181,7 @@ const SECTION_TITLE: Record<Section, string> = {
   reportes: "Reportes",
   supervisor: "Panel del supervisor",
   auditoria: "Auditoría de cambios",
+  facturacion: "Facturación histórica y scoring",
 };
 
 const REF_LABEL: Record<string, string> = {
@@ -1442,6 +1448,156 @@ function Parametros() {
   );
 }
 
+function Facturacion() {
+  const lista = productores.list();
+  const [id, setId] = useState(lista[0]?.id ?? "");
+  const [meses, setMeses] = useState<FacturacionMes[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const p = productores.get(id);
+    setMeses(p?.facturacionMensual ? p.facturacionMensual.map((m) => ({ ...m })) : []);
+  }, [id]);
+
+  const maxVol = Math.max(1, ...lista.map((p) => facturacionTotal(p)));
+  const prod = productores.get(id);
+  const score = prod ? scoringCliente({ ...prod, facturacionMensual: meses }, maxVol) : null;
+  const total = meses.reduce((a, m) => a + (m.monto || 0), 0);
+
+  const patch = (i: number, p: Partial<FacturacionMes>) =>
+    setMeses((ms) => ms.map((m, n) => (n === i ? { ...m, ...p } : m)));
+
+  const guardar = async () => {
+    const productor = productores.get(id);
+    if (!productor) return;
+    setSaving(true);
+    await productores.save({
+      ...productor,
+      facturacionMensual: meses.filter((m) => m.periodo),
+      updatedAt: Date.now(),
+    });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      <p className="text-[13px] text-ink-muted">
+        Cargá la facturación mes a mes de cada cliente. Con eso y el valor potencial se calcula el
+        scoring del cliente.
+      </p>
+      <div className="max-w-xs">
+        <Dropdown
+          value={id}
+          options={lista.map((p) => ({ value: p.id, label: p.razonSocial }))}
+          onChange={setId}
+        />
+      </div>
+
+      {score && (
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[12px] text-ink-muted">Scoring del cliente</p>
+              <p className="font-display text-[28px] font-bold leading-none text-ink">
+                {score.score}
+                <span className="text-[14px] font-medium text-ink-muted">/100</span>
+              </p>
+            </div>
+            <span
+              className={`rounded-pill px-3 py-1 text-[13px] font-semibold ${
+                score.categoria === "Alto"
+                  ? "bg-accent/10 text-accent-dark"
+                  : score.categoria === "Medio"
+                    ? "bg-amber/15 text-amber"
+                    : "bg-danger/10 text-danger"
+              }`}
+            >
+              {score.categoria}
+            </span>
+          </div>
+          <div className="mt-3 space-y-2 text-[12px]">
+            <div>
+              <div className="flex justify-between text-ink-muted">
+                <span>Captura (facturado / potencial)</span>
+                <span>{Math.round(score.captura * 100)}%</span>
+              </div>
+              <Bar pct={score.captura * 100} tone="accent" />
+            </div>
+            <div>
+              <div className="flex justify-between text-ink-muted">
+                <span>Constancia (meses facturados)</span>
+                <span>{Math.round(score.constancia * 100)}%</span>
+              </div>
+              <Bar pct={score.constancia * 100} />
+            </div>
+            <div>
+              <div className="flex justify-between text-ink-muted">
+                <span>Volumen facturado</span>
+                <span>{formatUsd(score.volumen)}</span>
+              </div>
+              <Bar pct={maxVol > 0 ? (score.volumen / maxVol) * 100 : 0} tone="amber" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="font-display text-[14px] font-semibold text-ink">Facturación mensual</p>
+          <button
+            onClick={() => setMeses((ms) => [...ms, { periodo: "", monto: 0 }])}
+            className="flex items-center gap-1 text-[13px] font-semibold text-primary"
+          >
+            <Plus size={15} /> Agregar mes
+          </button>
+        </div>
+        {meses.length === 0 && (
+          <p className="text-[12px] text-ink-muted">Sin facturación cargada. Agregá un mes.</p>
+        )}
+        {meses.map((m, i) => (
+          <div key={i} className="grid grid-cols-12 items-center gap-2">
+            <input
+              type="month"
+              value={m.periodo}
+              onChange={(e) => patch(i, { periodo: e.target.value })}
+              className="col-span-6 rounded-lg bg-surface px-2 py-2 text-[13px] outline-none"
+            />
+            <input
+              type="number"
+              value={m.monto || 0}
+              onChange={(e) => patch(i, { monto: Number(e.target.value) })}
+              placeholder="U$S"
+              className="col-span-5 rounded-lg bg-surface px-2 py-2 text-right text-[13px] outline-none"
+            />
+            <button
+              onClick={() => setMeses((ms) => ms.filter((_, n) => n !== i))}
+              aria-label="Quitar mes"
+              className="col-span-1 flex justify-center text-ink-muted hover:text-danger"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+        <div className="flex justify-between border-t border-line pt-2 text-[13px]">
+          <span className="text-ink-muted">Total facturado</span>
+          <span className="font-semibold text-ink">{formatUsd(total)}</span>
+        </div>
+      </div>
+
+      <button
+        onClick={guardar}
+        disabled={saving || !id}
+        className="press rounded-2xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:bg-disabled"
+      >
+        {saving ? "Guardando…" : saved ? "Guardado" : "Guardar facturación"}
+      </button>
+    </div>
+  );
+}
+
 function ValorClienteScreen() {
   const lista = productores.list();
   const [id, setId] = useState(lista[0]?.id ?? "");
@@ -1971,6 +2127,7 @@ export function Dashboard() {
             <PanelSupervisor onParametros={() => setSection("parametros")} />
           )}
           {section === "auditoria" && <Auditoria />}
+          {section === "facturacion" && <Facturacion />}
         </main>
       </div>
     </div>
