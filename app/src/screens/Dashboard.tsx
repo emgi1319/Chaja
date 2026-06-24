@@ -32,6 +32,7 @@ import {
   ArrowRight,
   Download,
   MapPin,
+  Menu,
 } from "lucide-react";
 import { useApp } from "../store";
 import {
@@ -638,8 +639,8 @@ function Kpi({
 
 function TableShell({ head, children }: { head: string[]; children: ReactNode }) {
   return (
-    <div className="card overflow-hidden p-0">
-      <table className="w-full text-[13px]">
+    <div className="card overflow-x-auto p-0">
+      <table className="w-full min-w-[560px] text-[13px]">
         <thead className="bg-surface text-left text-ink-muted">
           <tr>
             {head.map((h, i) => (
@@ -2004,14 +2005,22 @@ export function Dashboard() {
       return !v;
     });
   const dataVersion = useApp((s) => s.dataVersion);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pend = pendingTotal();
 
   return (
     <div className="flex h-full bg-surface">
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-ink/40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
       <aside
-        className={`flex shrink-0 flex-col bg-panel text-white transition-all ${
-          collapsed ? "w-16" : "w-16 md:w-60"
-        }`}
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+        className={`fixed inset-y-0 left-0 z-40 flex w-60 transform flex-col bg-panel text-white transition-transform md:relative md:z-auto md:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } ${collapsed ? "md:w-16" : "md:w-60"}`}
       >
         <div className="flex items-center gap-2 px-4 py-5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1">
@@ -2019,7 +2028,7 @@ export function Dashboard() {
           </div>
           <span
             className={`font-display text-[18px] font-bold tracking-wide ${
-              collapsed ? "hidden" : "hidden md:inline"
+              collapsed ? "inline md:hidden" : "inline"
             }`}
           >
             CHAJÁ
@@ -2045,40 +2054,46 @@ export function Dashboard() {
           </button>
         )}
 
-        <nav className="mt-1 flex-1 space-y-1 px-2">
+        <nav className="mt-1 flex-1 space-y-1 overflow-y-auto px-2">
           {visibleNav.map((n) => {
             const active = n.key === section;
             return (
               <button
                 key={n.key}
-                onClick={() => setSection(n.key)}
+                onClick={() => {
+                  setSection(n.key);
+                  setMobileOpen(false);
+                }}
                 title={n.label}
-                className={`flex w-full items-center rounded-xl px-3 py-2.5 text-[14px] transition-colors ${
-                  collapsed ? "justify-center" : "gap-3"
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition-colors ${
+                  collapsed ? "md:justify-center md:gap-0" : ""
                 } ${
                   active ? "bg-white/15 font-semibold text-white" : "text-white/65 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <n.icon size={19} className="shrink-0" />
-                <span className={collapsed ? "hidden" : "hidden md:inline"}>{n.label}</span>
+                <span className={collapsed ? "inline md:hidden" : "inline"}>{n.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
-          <div className={`flex items-center gap-2 ${collapsed ? "justify-center" : ""}`}>
+        <div
+          className="border-t border-white/10 p-3"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+        >
+          <div className={`flex items-center gap-2 ${collapsed ? "md:justify-center" : ""}`}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold">
               {user.nombre.charAt(0).toUpperCase()}
             </div>
-            <div className={collapsed ? "hidden" : "hidden min-w-0 flex-1 md:block"}>
+            <div className={collapsed ? "min-w-0 flex-1 md:hidden" : "min-w-0 flex-1"}>
               <p className="truncate text-[13px] font-medium">{user.nombre}</p>
               <p className="text-[11px] capitalize text-white/55">{user.rol}</p>
             </div>
             <button
               onClick={logout}
               aria-label="Salir"
-              className={`text-white/65 hover:text-white ${collapsed ? "hidden" : "hidden md:inline-flex"}`}
+              className={`text-white/65 hover:text-white ${collapsed ? "inline-flex md:hidden" : "inline-flex"}`}
             >
               <LogOut size={17} />
             </button>
@@ -2086,21 +2101,35 @@ export function Dashboard() {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-line bg-white px-6 py-4">
-          <h1 className="font-display text-[20px] font-semibold text-ink">{SECTION_TITLE[section]}</h1>
-          <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.875rem)" }}
+          className="flex items-center justify-between gap-2 border-b border-line bg-white px-4 py-3.5 md:px-6 md:py-4"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              onClick={() => setMobileOpen(true)}
+              aria-label="Abrir menú"
+              className="-ml-1 rounded-lg p-1.5 text-ink transition-colors hover:bg-surface md:hidden"
+            >
+              <Menu size={22} />
+            </button>
+            <h1 className="truncate font-display text-[18px] font-semibold text-ink md:text-[20px]">
+              {SECTION_TITLE[section]}
+            </h1>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
             {pend > 0 && (
-              <span className="rounded-pill bg-primary-tint px-3 py-1 text-[12px] font-medium text-primary-dark">
+              <span className="hidden rounded-pill bg-primary-tint px-3 py-1 text-[12px] font-medium text-primary-dark sm:inline">
                 {pend} sin sincronizar
               </span>
             )}
             <div className="flex items-center gap-2.5">
-              <div className="text-right leading-tight">
+              <div className="hidden text-right leading-tight sm:block">
                 <p className="text-[13px] font-semibold text-ink">{user.nombre}</p>
                 <p className="text-[11px] capitalize text-ink-muted">{user.rol}</p>
               </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-white">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-white">
                 {user.nombre
                   .split(" ")
                   .map((w) => w[0])
@@ -2111,7 +2140,11 @@ export function Dashboard() {
             </div>
           </div>
         </header>
-        <main key={`${section}-${dataVersion}`} className="fade-in flex-1 overflow-y-auto p-6">
+        <main
+          key={`${section}-${dataVersion}`}
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
+          className="fade-in flex-1 overflow-y-auto p-4 md:p-6"
+        >
           {section === "inicio" && <Inicio />}
           {section === "clientes" && <Clientes />}
           {section === "seguimiento" && <Seguimiento />}
