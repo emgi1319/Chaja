@@ -146,3 +146,22 @@ button {
 .drawer-panel {
   animation: slideInRight 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-panel {
+  animation: slideInUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 640px) {
+  .sheet-panel {
+    animation: slideInRight 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
