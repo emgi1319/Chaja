@@ -31,6 +31,7 @@ import {
   History,
   ArrowRight,
   Download,
+  MapPin,
 } from "lucide-react";
 import { useApp } from "../store";
 import {
@@ -891,6 +892,16 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
           <div>
             <h2 className="font-display text-[18px] font-semibold text-ink">{productor.razonSocial}</h2>
             <p className="text-[13px] text-ink-soft">{meta || "—"}</p>
+            {productor.unidades[0]?.lat != null && productor.unidades[0]?.lng != null && (
+              <a
+                href={`https://www.google.com/maps?q=${productor.unidades[0].lat},${productor.unidades[0].lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:underline"
+              >
+                <MapPin size={12} /> Ver ubicación en el mapa
+              </a>
+            )}
           </div>
         </div>
         <div className="flex gap-2">

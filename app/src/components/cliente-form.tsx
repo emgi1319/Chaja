@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, MapPin } from "lucide-react";
 import { Field, PrimaryButton, Dropdown } from "./ui";
 import { productores } from "../lib/api";
 import { newId } from "../lib/db";
@@ -8,6 +8,7 @@ import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { useApp } from "../store";
 import { DEMO_VENDEDORES } from "../lib/demo-data";
 import { getNombreCampania } from "../lib/parametros";
+import { getPosicion } from "../lib/native/geo";
 
 type CultivoDraft = { id: string; cultivo: string; superficieHa: string };
 
@@ -31,6 +32,8 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [vendedor, setVendedor] = useState(DEMO_VENDEDORES[0]?.nombre ?? "");
   const [campania, setCampania] = useState(getNombreCampania());
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const valorTotal = cultivos.reduce((acc, c) => acc + valorCultivo(toCultivo(c)), 0);
@@ -49,7 +52,9 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
       telefono,
       email,
       contactos: [],
-      unidades: [{ id: newId(), cultivos: cultivos.map(toCultivo) }],
+      unidades: [
+        { id: newId(), lat: coords?.lat, lng: coords?.lng, cultivos: cultivos.map(toCultivo) },
+      ],
       creadoPor: user?.nombre,
       updatedAt: Date.now(),
     };
@@ -80,6 +85,22 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
           }))}
           onChange={setCampania}
         />
+        <button
+          type="button"
+          onClick={async () => {
+            setGeoLoading(true);
+            setCoords(await getPosicion());
+            setGeoLoading(false);
+          }}
+          className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          <MapPin size={15} className="text-primary" />
+          {coords
+            ? `Ubicación: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+            : geoLoading
+              ? "Obteniendo ubicación…"
+              : "Usar mi ubicación (georreferenciar)"}
+        </button>
       </div>
 
       <div className="space-y-3">
