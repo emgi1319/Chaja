@@ -61,7 +61,7 @@ import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
-import { importarProductosExcel } from "../lib/import-excel";
+import { importarClientesExcel, importarProductosExcel } from "../lib/import-excel";
 import { scoringCliente, facturacionTotal } from "../lib/scoring";
 import {
   InfoTip,
@@ -1207,7 +1207,22 @@ function Clientes() {
   const [selected, setSelected] = useState<string | null>(null);
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const [version, setVersion] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const all = useMemo(() => productoresRows(), [version]);
+
+  const onImport = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      await importarClientesExcel(file);
+      setVersion((v) => v + 1);
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
     if (!t) return all;
@@ -1251,6 +1266,21 @@ function Clientes() {
           className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
         >
           <Download size={16} /> Exportar
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          onChange={onImport}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={importing}
+          className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface disabled:opacity-60"
+        >
+          <Download size={16} className="rotate-180" />
+          {importing ? "Importando…" : "Importar"}
         </button>
         <button
           onClick={() => setNuevoOpen(true)}
@@ -1414,8 +1444,47 @@ function Productos() {
 function Reportes() {
   const cultivos = capturaPorCultivo();
   const maxPot = Math.max(1, ...cultivos.map((c) => c.potencial));
+  const alertasCredito = productores
+    .list()
+    .filter((p) => p.creditoAcordado && p.creditoAcordado > 0)
+    .map((p) => ({ p, fact: facturacionTotal(p), credito: p.creditoAcordado as number }))
+    .filter((x) => x.fact >= x.credito * 0.8)
+    .sort((a, b) => b.fact / b.credito - a.fact / a.credito);
   return (
     <div className="grid gap-6 lg:grid-cols-2">
+      {alertasCredito.length > 0 && (
+        <section className="card lg:col-span-2">
+          <h2 className="flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
+            <AlertTriangle size={16} className="text-amber" />
+            Clientes cerca del crédito otorgado
+          </h2>
+          <p className="mt-1 text-[12px] text-ink-muted">
+            Facturación acumulada sobre el crédito otorgado. En rojo, los que ya lo superaron.
+          </p>
+          <div className="mt-3 space-y-2.5">
+            {alertasCredito.map(({ p, fact, credito }) => {
+              const pct = Math.min(100, (fact / credito) * 100);
+              const over = fact >= credito;
+              return (
+                <div key={p.id}>
+                  <div className="mb-1 flex items-center justify-between text-[12px]">
+                    <span className="font-medium text-ink">{p.razonSocial}</span>
+                    <span className={over ? "font-semibold text-danger" : "text-ink-muted"}>
+                      {formatUsd(fact)} / {formatUsd(credito)} · {Math.round((fact / credito) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-pill bg-line">
+                    <div
+                      className={`h-2 ${over ? "bg-danger" : "bg-amber"}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
       <section className="card">
         <h2 className="font-display text-[15px] font-semibold text-ink">Captura por cultivo</h2>
         <div className="mt-3 space-y-3">

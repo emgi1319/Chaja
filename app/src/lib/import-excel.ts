@@ -1,5 +1,5 @@
-import type { Producto } from "../types";
-import { saveProducto } from "./api";
+import type { Producto, Productor } from "../types";
+import { saveProducto, productores } from "./api";
 import { newId } from "./db";
 
 // Importa un catálogo de productos desde un Excel/CSV. Mapea las columnas por
@@ -49,6 +49,67 @@ export async function importarProductosExcel(file: File): Promise<number> {
       stock: numOf(pick("stock", "existencia")),
     };
     await saveProducto(prod);
+    n++;
+  }
+  return n;
+}
+
+// Importa una base de clientes desde Excel/CSV. Toma los datos del productor y,
+// si la fila trae cultivo/hectáreas, arma una unidad productiva inicial.
+export async function importarClientesExcel(file: File): Promise<number> {
+  const XLSX = await import("xlsx");
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  if (!sheet) return 0;
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+  let n = 0;
+  for (const r of rows) {
+    const keys = Object.keys(r);
+    const pick = (...needles: string[]): unknown => {
+      const k = keys.find((key) => needles.some((nd) => key.toLowerCase().includes(nd)));
+      return k ? r[k] : undefined;
+    };
+    const str = (v: unknown): string | undefined => {
+      const s = String(v ?? "").trim();
+      return s || undefined;
+    };
+    const numOf = (v: unknown): number | undefined => {
+      const x = parseFloat(
+        String(v ?? "")
+          .replace(/[^\d.,-]/g, "")
+          .replace(",", "."),
+      );
+      return isNaN(x) ? undefined : x;
+    };
+
+    const razonSocial = str(pick("establecimiento", "razón", "razon", "cliente", "nombre"));
+    if (!razonSocial) continue;
+
+    const ha = numOf(pick("hectá", "hecta", " ha"));
+    const cultivo = str(pick("cultivo")) ?? "Maíz";
+    const facturado = numOf(pick("facturado")) ?? 0;
+
+    const prod: Productor = {
+      id: newId(),
+      razonSocial,
+      vendedor: str(pick("vendedor", "asignado")),
+      localidad: str(pick("localidad", "ciudad")),
+      cuitRut: str(pick("cuit", "fiscal", "rut")),
+      email: str(pick("email", "correo", "mail")),
+      telefono: str(pick("teléfono", "telefono", "celular", "tel")),
+      creditoAcordado: numOf(pick("crédito", "credito")),
+      contactos: [],
+      unidades: [
+        {
+          id: newId(),
+          cultivos: ha ? [{ id: newId(), cultivo, superficieHa: ha, facturado }] : [],
+        },
+      ],
+      updatedAt: Date.now(),
+    };
+    await productores.save(prod);
     n++;
   }
   return n;
