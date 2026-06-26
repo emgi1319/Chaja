@@ -11,6 +11,7 @@ export const LOCAL_MODE = !API_BASE;
 const CATALOG_KEY = "chaja.catalogo";
 const USER_KEY = "chaja.user";
 const TOKEN_KEY = "chaja.token";
+const PENDING_OPS_KEY = "chaja.pending_ops";
 
 export function readToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -127,7 +128,8 @@ export async function syncPending(): Promise<number> {
     referidos.syncPending(),
     operaciones.syncPending(),
   ]);
-  return counts.reduce((a, b) => a + b, 0);
+  const ops = await flushOps();
+  return counts.reduce((a, b) => a + b, 0) + ops;
 }
 
 export async function pullAll(): Promise<void> {
@@ -144,7 +146,8 @@ export function pendingTotal(): number {
     productores.pendingCount() +
     notasCampo.pendingCount() +
     referidos.pendingCount() +
-    operaciones.pendingCount()
+    operaciones.pendingCount() +
+    pendingOpsCount()
   );
 }
 
@@ -155,6 +158,42 @@ function cacheGet<T>(key: string): T | null {
   } catch {
     return null;
   }
+}
+
+// Cola de mutaciones que no son colecciones (catálogo, parámetros, auditoría).
+// Se reintentan al recuperar señal, igual que los registros pendientes.
+interface PendingOp {
+  id: string;
+  path: string;
+  body: unknown;
+}
+
+function queueOp(path: string, body: unknown): void {
+  const ops = cacheGet<PendingOp[]>(PENDING_OPS_KEY) ?? [];
+  ops.push({ id: newId(), path, body });
+  localStorage.setItem(PENDING_OPS_KEY, JSON.stringify(ops));
+}
+
+function pendingOpsCount(): number {
+  return (cacheGet<PendingOp[]>(PENDING_OPS_KEY) ?? []).length;
+}
+
+async function flushOps(): Promise<number> {
+  if (!API_BASE || !navigator.onLine) return 0;
+  const ops = cacheGet<PendingOp[]>(PENDING_OPS_KEY) ?? [];
+  if (!ops.length) return 0;
+  const remaining: PendingOp[] = [];
+  let done = 0;
+  for (const op of ops) {
+    try {
+      await request(op.path, { method: "POST", body: JSON.stringify(op.body) });
+      done++;
+    } catch {
+      remaining.push(op);
+    }
+  }
+  localStorage.setItem(PENDING_OPS_KEY, JSON.stringify(remaining));
+  return done;
 }
 
 export async function loadCatalog(): Promise<Producto[]> {
@@ -181,7 +220,7 @@ export async function saveProducto(p: Producto): Promise<void> {
   try {
     await request("/productos", { method: "POST", body: JSON.stringify(p) });
   } catch {
-    // queda en cache local hasta resincronizar
+    queueOp("/productos", p);
   }
 }
 
@@ -199,7 +238,7 @@ export async function pushParametro(clave: string, valor: unknown): Promise<void
   try {
     await request("/parametros", { method: "POST", body: JSON.stringify({ clave, valor }) });
   } catch {
-    // queda en cache local hasta resincronizar
+    queueOp("/parametros", { clave, valor });
   }
 }
 
@@ -219,7 +258,7 @@ export async function registrarAuditoria(evento: AuditoriaEvento): Promise<void>
   try {
     await request("/auditoria", { method: "POST", body: JSON.stringify(evento) });
   } catch {
-    // el log de auditoría no bloquea la operación del usuario
+    queueOp("/auditoria", evento);
   }
 }
 
