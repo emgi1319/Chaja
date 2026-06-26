@@ -96,6 +96,7 @@ import {
   alertasPanel,
   vendedoresResumen,
   proximaAccion,
+  semaforoTiempo,
   supervisorVendedores,
   supervisorStats,
   campEstado,
@@ -254,6 +255,34 @@ function OpEstadoBadge({ estado }: { estado: EstadoOperacion }) {
   );
 }
 
+function SemTiempoBadge({ ultimaFecha }: { ultimaFecha: string | null }) {
+  const s = semaforoTiempo(ultimaFecha);
+  const tone =
+    s.kind === "verde"
+      ? "bg-accent/15 text-accent-dark"
+      : s.kind === "amarillo"
+        ? "bg-amber/15 text-amber"
+        : s.kind === "rojo"
+          ? "bg-danger/10 text-danger"
+          : "bg-surface text-ink-muted";
+  const dot =
+    s.kind === "verde"
+      ? "bg-accent"
+      : s.kind === "amarillo"
+        ? "bg-amber"
+        : s.kind === "rojo"
+          ? "bg-danger"
+          : "bg-ink-muted";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-[12px] font-medium ${tone}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+      {s.label}
+    </span>
+  );
+}
+
 function Seguimiento() {
   const rows = seguimientoClientes();
   const s = seguimientoStats();
@@ -265,7 +294,9 @@ function Seguimiento() {
         <Kpi icon={Filter} label="En proceso" value={String(s.enProceso)} />
         <Kpi icon={UserCheck} label="Ganados" value={String(s.ganados)} tone="accent" />
       </div>
-      <TableShell head={["Cliente", "Vendedor", "Etapa", "Valor potencial", "Próxima acción"]}>
+      <TableShell
+        head={["Cliente", "Vendedor", "Etapa", "Valor potencial", "Próxima acción", "Tiempo"]}
+      >
         {rows.map((r) => (
           <tr
             key={r.productor.id}
@@ -278,6 +309,9 @@ function Seguimiento() {
             </td>
             <td className="px-4 py-3 text-right font-semibold text-accent">{formatUsd(r.valor)}</td>
             <td className="px-4 py-3 text-right text-ink-soft">{proximaAccion(r.etapa)}</td>
+            <td className="px-4 py-3 text-right">
+              <SemTiempoBadge ultimaFecha={r.ultimaFecha} />
+            </td>
           </tr>
         ))}
       </TableShell>

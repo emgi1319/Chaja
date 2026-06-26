@@ -299,6 +299,21 @@ export function proximaAccion(etapa: string | null): string {
   return etapa ? (PROXIMA_ACCION[etapa] ?? "Definir próximo paso") : "Iniciar contacto";
 }
 
+export interface SemTiempo {
+  kind: "verde" | "amarillo" | "rojo" | "gris";
+  label: string;
+}
+
+// Semáforo de seguimiento por antigüedad del último contacto: cuanto más tiempo
+// sin tocar al cliente, más urgente. Sin actividad registrada queda en gris.
+export function semaforoTiempo(ultimaFecha: string | null): SemTiempo {
+  if (!ultimaFecha) return { kind: "gris", label: "Sin actividad" };
+  const dias = Math.floor((Date.now() - new Date(ultimaFecha).getTime()) / 86_400_000);
+  if (dias > 30) return { kind: "rojo", label: `${dias} días` };
+  if (dias > 15) return { kind: "amarillo", label: `${dias} días` };
+  return { kind: "verde", label: dias <= 0 ? "Hoy" : `${dias} día${dias === 1 ? "" : "s"}` };
+}
+
 export interface AlertaPanel {
   nivel: "alta" | "media" | "info";
   titulo: string;
