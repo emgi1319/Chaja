@@ -29,6 +29,8 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [localidad, setLocalidad] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
+  const [cuitRut, setCuitRut] = useState("");
+  const [credito, setCredito] = useState("");
   const [vendedor, setVendedor] = useState(DEMO_VENDEDORES[0]?.nombre ?? "");
   const [campania, setCampania] = useState(getNombreCampania());
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
@@ -51,6 +53,8 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
       localidad,
       telefono,
       email,
+      cuitRut: cuitRut.trim() || undefined,
+      creditoAcordado: num(credito) || undefined,
       contactos: [],
       unidades: [
         { id: newId(), lat: coords?.lat, lng: coords?.lng, cultivos: cultivos.map(toCultivo) },
@@ -67,9 +71,16 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
     <div className="space-y-4">
       <div className="space-y-3">
         <Field label="Nombre del establecimiento" value={razonSocial} onChange={setRazonSocial} />
+        <Field label="Número fiscal (CUIT)" value={cuitRut} onChange={setCuitRut} inputMode="numeric" />
         <Field label="Localidad" value={localidad} onChange={setLocalidad} />
         <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
         <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
+        <Field
+          label="Crédito otorgado (U$S)"
+          value={credito}
+          onChange={setCredito}
+          inputMode="decimal"
+        />
         <Dropdown
           label="Vendedor asignado"
           value={vendedor}

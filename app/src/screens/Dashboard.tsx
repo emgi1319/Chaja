@@ -145,8 +145,8 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "facturacion", label: "Facturación", icon: DollarSign },
 ];
 
-// Secciones visibles por perfil (el gerente ve todo). El supervisor no carga
-// clientes ni actividad; el vendedor no ve equipo, reportes ni parámetros.
+// Secciones visibles por perfil (el gerente ve todo). El supervisor ve clientes
+// pero no carga actividad; el vendedor no ve equipo, reportes ni parámetros.
 const RAIL_VEND: Section[] = [
   "inicio",
   "clientes",
@@ -159,6 +159,7 @@ const RAIL_VEND: Section[] = [
 ];
 const RAIL_SUP: Section[] = [
   "inicio",
+  "clientes",
   "seguimiento",
   "operaciones",
   "reportes",
@@ -183,6 +184,24 @@ const SECTION_TITLE: Record<Section, string> = {
   supervisor: "Panel del supervisor",
   auditoria: "Auditoría de cambios",
   facturacion: "Facturación histórica y scoring",
+};
+
+// Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
+const SECTION_DESC: Record<Section, string> = {
+  inicio: "Resumen comercial de la campaña: avance, oportunidad y alertas.",
+  clientes: "Cartera de productores con su valor potencial y estado comercial.",
+  seguimiento: "Embudo de cada cliente y la próxima acción a realizar.",
+  operaciones: "Oportunidades de venta abiertas por producto y cultivo.",
+  referidos: "Prospectos referidos y su avance hasta la venta.",
+  actividad: "Registrá visitas, asesorías y gestiones sobre cada cliente.",
+  equipo: "Desempeño de cada vendedor: facturado, oportunidad y captura.",
+  productos: "Catálogo de insumos con precios y presentaciones.",
+  valorcliente: "Calculá el potencial de compra de cada cliente por cultivo.",
+  parametros: "Costos por hectárea, campañas y fórmula agronómica.",
+  reportes: "Comparativos de facturación, oportunidad y captura por vendedor y cultivo.",
+  supervisor: "Cronograma de campañas y semáforo de avance por vendedor.",
+  auditoria: "Historial de cambios sobre el Valor Cliente.",
+  facturacion: "Carga mensual de facturación y scoring de cada cliente.",
 };
 
 const REF_LABEL: Record<string, string> = {
@@ -2125,9 +2144,14 @@ export function Dashboard() {
             >
               <Menu size={22} />
             </button>
-            <h1 className="truncate font-display text-[18px] font-semibold text-ink md:text-[20px]">
-              {SECTION_TITLE[section]}
-            </h1>
+            <div className="min-w-0 leading-tight">
+              <h1 className="truncate font-display text-[18px] font-semibold text-ink md:text-[20px]">
+                {SECTION_TITLE[section]}
+              </h1>
+              <p className="truncate text-[12px] font-normal text-ink-muted">
+                {SECTION_DESC[section]}
+              </p>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {pend > 0 && (
