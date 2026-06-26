@@ -1543,10 +1543,88 @@ function Donut({ data }: { data: { label: string; value: number; color: string }
   );
 }
 
+function Barras({
+  data,
+  tone = "primary",
+}: {
+  data: { label: string; value: number }[];
+  tone?: "primary" | "accent" | "amber";
+}) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const color = tone === "accent" ? "bg-accent" : tone === "amber" ? "bg-amber" : "bg-primary";
+  if (data.length === 0) return <p className="text-[12px] text-ink-muted">Sin datos.</p>;
+  return (
+    <div className="space-y-2">
+      {data.map((d) => (
+        <div key={d.label}>
+          <div className="mb-0.5 flex items-center justify-between text-[12px]">
+            <span className="text-ink-soft">{d.label}</span>
+            <span className="font-medium text-ink-muted">{d.value}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-pill bg-line">
+            <div className={`h-2 ${color}`} style={{ width: `${(d.value / max) * 100}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AreaLine({ puntos }: { puntos: { mes: string; valor: number }[] }) {
+  const max = Math.max(1, ...puntos.map((p) => p.valor));
+  const W = 280;
+  const H = 90;
+  const pad = 6;
+  const stepX = puntos.length > 1 ? (W - pad * 2) / (puntos.length - 1) : 0;
+  const pts = puntos.map((p, i) => {
+    const x = pad + i * stepX;
+    const y = H - pad - (p.valor / max) * (H - pad * 2);
+    return [x, y] as const;
+  });
+  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x},${y}`).join(" ");
+  const area = pts.length > 0 ? `${line} L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z` : "";
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-24 w-full">
+        <path d={area} fill="#1B5E9B" opacity="0.12" />
+        <path d={line} fill="none" stroke="#1B5E9B" strokeWidth="2" />
+        {pts.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="2.5" fill="#1B5E9B" />
+        ))}
+      </svg>
+      <div className="mt-1 flex justify-between text-[11px] text-ink-muted">
+        {puntos.map((p) => (
+          <span key={p.mes}>{p.mes}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Reportes() {
   const cultivos = capturaPorCultivo();
   const ops = operaciones.list();
   const maxPot = Math.max(1, ...cultivos.map((c) => c.potencial));
+  const opsPorEtapa = Object.entries(
+    ops.reduce<Record<string, number>>((acc, o) => {
+      acc[o.etapa] = (acc[o.etapa] ?? 0) + 1;
+      return acc;
+    }, {}),
+  ).map(([etapa, value]) => ({
+    label: ESTADO_PROCESO_LABEL[etapa as EstadoProceso] ?? etapa,
+    value,
+  }));
+  const clientesPorEtapa = Object.entries(
+    seguimientoClientes().reduce<Record<string, number>>((acc, r) => {
+      const k = r.etapa ?? "sin";
+      acc[k] = (acc[k] ?? 0) + 1;
+      return acc;
+    }, {}),
+  ).map(([etapa, value]) => ({
+    label:
+      etapa === "sin" ? "Sin actividad" : (ESTADO_PROCESO_LABEL[etapa as EstadoProceso] ?? etapa),
+    value,
+  }));
   const alertasCredito = productores
     .list()
     .filter((p) => p.creditoAcordado && p.creditoAcordado > 0)
@@ -1647,6 +1725,27 @@ function Reportes() {
               { label: "Perdidas", value: ops.filter((o) => o.estado === "perdida").length, color: "#DC2626" },
             ]}
           />
+        </div>
+      </section>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Evolución del facturado</h2>
+        <div className="mt-4">
+          <AreaLine puntos={serieMensual().map((p) => ({ mes: p.mes, valor: p.facturado }))} />
+        </div>
+      </section>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Operaciones por etapa</h2>
+        <div className="mt-3">
+          <Barras tone="amber" data={opsPorEtapa} />
+        </div>
+      </section>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Clientes por etapa</h2>
+        <div className="mt-3">
+          <Barras data={clientesPorEtapa} />
         </div>
       </section>
     </div>
