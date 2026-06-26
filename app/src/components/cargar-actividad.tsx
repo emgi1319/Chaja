@@ -129,9 +129,33 @@ export function CargarActividad({
   };
 
   const enviar = (canal: "email" | "wp") => {
-    const texto = `Asesoría — ${productor?.razonSocial ?? ""}\n${comentarios}`;
-    if (canal === "wp") window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
-    else window.open(`mailto:?subject=${encodeURIComponent("Asesoría")}&body=${encodeURIComponent(texto)}`, "_blank");
+    let asunto: string;
+    let texto: string;
+    if (actividad === "presupuesto") {
+      const items = lineas
+        .filter((l) => l.productoId)
+        .map((l) => {
+          const p = catalogo.find((x) => x.id === l.productoId);
+          return `- ${l.cantidad}x ${p?.nombre ?? ""}: ${formatUsd(num(l.precio) * num(l.cantidad))}`;
+        })
+        .join("\n");
+      asunto = `Presupuesto — ${productor?.razonSocial ?? ""}`;
+      texto = `${asunto}\n\n${items}\n\nTotal: ${formatUsd(total)}`;
+    } else {
+      asunto = `Asesoría — ${productor?.razonSocial ?? ""}`;
+      texto = `${asunto}\n${comentarios}`;
+    }
+    if (canal === "wp") {
+      const tel = (productor?.celular ?? productor?.telefono ?? "").replace(/\D/g, "");
+      const base = tel ? `https://wa.me/${tel}` : "https://wa.me/";
+      window.open(`${base}?text=${encodeURIComponent(texto)}`, "_blank");
+    } else {
+      const to = productor?.email ?? "";
+      window.open(
+        `mailto:${to}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(texto)}`,
+        "_blank",
+      );
+    }
   };
 
   if (lista.length === 0) {
@@ -315,6 +339,20 @@ export function CargarActividad({
               <Plus size={15} /> Agregar producto
             </button>
             <span className="text-[14px] font-semibold text-ink">Total: {formatUsd(total)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 border-t border-line pt-3">
+            <button
+              onClick={() => enviar("email")}
+              className="flex items-center gap-1.5 rounded-2xl border border-line px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+            >
+              <Mail size={15} /> Enviar por email
+            </button>
+            <button
+              onClick={() => enviar("wp")}
+              className="flex items-center gap-1.5 rounded-2xl border border-line px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+            >
+              <MessageCircle size={15} /> WhatsApp
+            </button>
           </div>
         </div>
       )}

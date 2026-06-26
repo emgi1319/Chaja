@@ -921,6 +921,49 @@ function formatFecha(iso?: string): string {
   });
 }
 
+function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () => void }) {
+  const p = productores.get(id);
+  const [email, setEmail] = useState(p?.email ?? "");
+  const [telefono, setTelefono] = useState(p?.telefono ?? "");
+  const [cuit, setCuit] = useState(p?.cuitRut ?? "");
+  const [credito, setCredito] = useState(p?.creditoAcordado != null ? String(p.creditoAcordado) : "");
+  const [scoring, setScoring] = useState(p?.scoringCrediticio ?? "");
+  const [localidad, setLocalidad] = useState(p?.localidad ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const guardar = async () => {
+    if (!p) return;
+    setSaving(true);
+    const credNum = parseFloat(credito.replace(",", "."));
+    await productores.save({
+      ...p,
+      email: email.trim() || undefined,
+      telefono: telefono.trim() || undefined,
+      cuitRut: cuit.trim() || undefined,
+      creditoAcordado: isNaN(credNum) ? undefined : credNum,
+      scoringCrediticio: scoring.trim() || undefined,
+      localidad: localidad.trim() || undefined,
+      updatedAt: Date.now(),
+    });
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <div className="space-y-3">
+      <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
+      <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
+      <Field label="Número fiscal (CUIT)" value={cuit} onChange={setCuit} inputMode="numeric" />
+      <Field label="Crédito otorgado (U$S)" value={credito} onChange={setCredito} inputMode="decimal" />
+      <Field label="Scoring crediticio" value={scoring} onChange={setScoring} />
+      <Field label="Localidad" value={localidad} onChange={setLocalidad} />
+      <PrimaryButton disabled={saving} onClick={guardar}>
+        {saving ? "Guardando…" : "Guardar datos"}
+      </PrimaryButton>
+    </div>
+  );
+}
+
 function DatoFicha({ label, valor }: { label: string; valor?: string }) {
   return (
     <div>
@@ -935,6 +978,7 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
   const row = productoresRows().find((r) => r.productor.id === id);
   const [histOpen, setHistOpen] = useState(false);
   const [actOpen, setActOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [, bump] = useState(0);
 
   if (!productor || !row) return null;
@@ -1041,19 +1085,27 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
       </div>
 
       <div className="card space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-[14px] font-semibold text-ink">Datos del cliente</h3>
-          <span
-            className={`rounded-pill px-2.5 py-0.5 text-[12px] font-semibold ${
-              scoreCliente.categoria === "Alto"
-                ? "bg-accent/10 text-accent-dark"
-                : scoreCliente.categoria === "Medio"
-                  ? "bg-amber/15 text-amber"
-                  : "bg-danger/10 text-danger"
-            }`}
-          >
-            Scoring {scoreCliente.score}/100 · {scoreCliente.categoria}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-pill px-2.5 py-0.5 text-[12px] font-semibold ${
+                scoreCliente.categoria === "Alto"
+                  ? "bg-accent/10 text-accent-dark"
+                  : scoreCliente.categoria === "Medio"
+                    ? "bg-amber/15 text-amber"
+                    : "bg-danger/10 text-danger"
+              }`}
+            >
+              Scoring {scoreCliente.score}/100 · {scoreCliente.categoria}
+            </span>
+            <button
+              onClick={() => setEditOpen(true)}
+              className="text-[13px] font-semibold text-primary hover:underline"
+            >
+              Editar
+            </button>
+          </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px] sm:grid-cols-3">
           <DatoFicha label="Número fiscal (CUIT)" valor={productor.cuitRut} />
@@ -1067,6 +1119,16 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
           <DatoFicha label="Localidad" valor={productor.localidad} />
         </dl>
       </div>
+
+      <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Editar datos del cliente">
+        <EditarDatosCliente
+          id={id}
+          onSaved={() => {
+            setEditOpen(false);
+            bump((n) => n + 1);
+          }}
+        />
+      </Drawer>
 
       {cultivos.length > 0 && (
         <div>
@@ -1441,8 +1503,49 @@ function Productos() {
   );
 }
 
+function Donut({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const total = data.reduce((a, d) => a + d.value, 0) || 1;
+  const C = 2 * Math.PI * 42;
+  let offset = 0;
+  return (
+    <div className="flex items-center gap-5">
+      <svg viewBox="0 0 100 100" className="h-28 w-28 -rotate-90">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#EEF1F4" strokeWidth="14" />
+        {data.map((d) => {
+          const len = (d.value / total) * C;
+          const el = (
+            <circle
+              key={d.label}
+              cx="50"
+              cy="50"
+              r="42"
+              fill="none"
+              stroke={d.color}
+              strokeWidth="14"
+              strokeDasharray={`${len} ${C - len}`}
+              strokeDashoffset={-offset}
+            />
+          );
+          offset += len;
+          return el;
+        })}
+      </svg>
+      <div className="min-w-[120px] space-y-1.5 text-[13px]">
+        {data.map((d) => (
+          <div key={d.label} className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />
+            <span className="text-ink-soft">{d.label}</span>
+            <span className="ml-auto font-semibold text-ink">{d.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Reportes() {
   const cultivos = capturaPorCultivo();
+  const ops = operaciones.list();
   const maxPot = Math.max(1, ...cultivos.map((c) => c.potencial));
   const alertasCredito = productores
     .list()
@@ -1531,6 +1634,19 @@ function Reportes() {
               <span className="h-2 w-2 rounded-full bg-amber" /> Oportunidad
             </span>
           </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Operaciones por estado</h2>
+        <div className="mt-4">
+          <Donut
+            data={[
+              { label: "Abiertas", value: ops.filter((o) => o.estado === "abierta").length, color: "#D97706" },
+              { label: "Ganadas", value: ops.filter((o) => o.estado === "ganada").length, color: "#1FA971" },
+              { label: "Perdidas", value: ops.filter((o) => o.estado === "perdida").length, color: "#DC2626" },
+            ]}
+          />
         </div>
       </section>
     </div>
