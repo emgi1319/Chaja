@@ -1,4 +1,12 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import {
   LayoutDashboard,
   Users,
@@ -53,6 +61,7 @@ import { ClienteForm } from "../components/cliente-form";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
+import { importarProductosExcel } from "../lib/import-excel";
 import { scoringCliente, facturacionTotal } from "../lib/scoring";
 import {
   InfoTip,
@@ -878,6 +887,15 @@ function formatFecha(iso?: string): string {
   });
 }
 
+function DatoFicha({ label, valor }: { label: string; valor?: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] text-ink-muted">{label}</dt>
+      <dd className="font-medium text-ink">{valor || "—"}</dd>
+    </div>
+  );
+}
+
 function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
   const productor = productores.get(id);
   const row = productoresRows().find((r) => r.productor.id === id);
@@ -911,6 +929,8 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
     { label: "Oportunidad", value: formatUsd(row.oportunidad), tone: "amber" },
     { label: "% capturado", value: formatPct(row.captura) },
   ];
+  const maxVol = Math.max(1, ...productores.list().map(facturacionTotal));
+  const scoreCliente = scoringCliente(productor, maxVol);
 
   return (
     <div className="space-y-5">
@@ -984,6 +1004,34 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
             {formatUsd(row.oportunidad)} a capturar
           </p>
         </div>
+      </div>
+
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-[14px] font-semibold text-ink">Datos del cliente</h3>
+          <span
+            className={`rounded-pill px-2.5 py-0.5 text-[12px] font-semibold ${
+              scoreCliente.categoria === "Alto"
+                ? "bg-accent/10 text-accent-dark"
+                : scoreCliente.categoria === "Medio"
+                  ? "bg-amber/15 text-amber"
+                  : "bg-danger/10 text-danger"
+            }`}
+          >
+            Scoring {scoreCliente.score}/100 · {scoreCliente.categoria}
+          </span>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px] sm:grid-cols-3">
+          <DatoFicha label="Número fiscal (CUIT)" valor={productor.cuitRut} />
+          <DatoFicha label="Email" valor={productor.email} />
+          <DatoFicha label="Teléfono" valor={productor.telefono} />
+          <DatoFicha
+            label="Crédito otorgado"
+            valor={productor.creditoAcordado != null ? formatUsd(productor.creditoAcordado) : undefined}
+          />
+          <DatoFicha label="Scoring crediticio" valor={productor.scoringCrediticio} />
+          <DatoFicha label="Localidad" valor={productor.localidad} />
+        </dl>
       </div>
 
       {cultivos.length > 0 && (
@@ -1254,10 +1302,42 @@ function Equipo() {
 
 function Productos() {
   const catalogo = useApp((s) => s.catalogo);
+  const refresh = useApp((s) => s.refresh);
   const [open, setOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onImport = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      await importarProductosExcel(file);
+      await refresh();
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          onChange={onImport}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={importing}
+          className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface disabled:opacity-60"
+        >
+          <Download size={16} className="rotate-180" />
+          {importing ? "Importando…" : "Importar Excel"}
+        </button>
         <button
           onClick={() => setOpen(true)}
           className="press flex items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
