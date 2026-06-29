@@ -116,7 +116,6 @@ import {
   setCostosHa,
   getConfig,
   getObjetivoCampania,
-  getNombreCampania,
   setObjetivoCampania,
   setNombreCampania,
   getCampanias,
@@ -750,19 +749,16 @@ function Inicio() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-xl text-[13px] text-ink-muted">
-          Tu negocio comercial de un vistazo · Panel de campaña {getNombreCampania()}
-        </p>
-        {user?.rol !== "supervisor" && (
+      {user?.rol !== "supervisor" && (
+        <div className="flex justify-end">
           <button
             onClick={() => setNuevoOpen(true)}
             className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
           >
             <Plus size={17} /> Nuevo cliente
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi
@@ -1259,7 +1255,7 @@ function Clientes() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex w-full max-w-sm items-center gap-2 rounded-2xl border border-transparent bg-white px-3 shadow-card transition-all focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10">
           <Search size={18} className="text-ink-muted" />
           <input
@@ -1269,47 +1265,49 @@ function Clientes() {
             className="w-full bg-transparent py-2.5 text-[14px] outline-none"
           />
         </div>
-        <button
-          onClick={() =>
-            void exportarExcel(
-              "clientes",
-              all.map((r) => ({
-                Cliente: r.productor.razonSocial,
-                Vendedor: r.productor.vendedor ?? "",
-                Localidad: r.productor.localidad ?? "",
-                Hectareas: r.hectareas,
-                "Valor potencial": Math.round(r.potencial),
-                Facturado: Math.round(r.facturado),
-                Oportunidad: Math.round(r.oportunidad),
-                "Captura %": Math.round(r.captura * 100),
-              })),
-            )
-          }
-          className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
-        >
-          <Download size={16} /> Exportar
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={onImport}
-          className="hidden"
-        />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={importing}
-          className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface disabled:opacity-60"
-        >
-          <Download size={16} className="rotate-180" />
-          {importing ? "Importando…" : "Importar"}
-        </button>
-        <button
-          onClick={() => setNuevoOpen(true)}
-          className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
-        >
-          <Plus size={17} /> Nuevo cliente
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() =>
+              void exportarExcel(
+                "clientes",
+                all.map((r) => ({
+                  Cliente: r.productor.razonSocial,
+                  Vendedor: r.productor.vendedor ?? "",
+                  Localidad: r.productor.localidad ?? "",
+                  Hectareas: r.hectareas,
+                  "Valor potencial": Math.round(r.potencial),
+                  Facturado: Math.round(r.facturado),
+                  Oportunidad: Math.round(r.oportunidad),
+                  "Captura %": Math.round(r.captura * 100),
+                })),
+              )
+            }
+            className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
+          >
+            <Download size={16} /> Exportar
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={onImport}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={importing}
+            className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface disabled:opacity-60"
+          >
+            <Download size={16} className="rotate-180" />
+            {importing ? "Importando…" : "Importar"}
+          </button>
+          <button
+            onClick={() => setNuevoOpen(true)}
+            className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+          >
+            <Plus size={17} /> Nuevo cliente
+          </button>
+        </div>
       </div>
 
       <TableShell
@@ -2506,7 +2504,7 @@ export function Dashboard() {
               <h1 className="truncate font-display text-[18px] font-semibold text-ink md:text-[20px]">
                 {SECTION_TITLE[section]}
               </h1>
-              <p className="truncate text-[12px] font-normal text-ink-muted">
+              <p className="truncate text-[13px] font-normal text-ink-soft">
                 {SECTION_DESC[section]}
               </p>
             </div>
