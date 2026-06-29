@@ -185,12 +185,12 @@ const SECTION_TITLE: Record<Section, string> = {
   clientes: "Clientes y su Valor Cliente",
   seguimiento: "Seguimiento por cliente",
   operaciones: "Operaciones por cliente y producto",
-  referidos: "Referidos",
+  referidos: "Referidos: son tus nuevos clientes potenciales",
   actividad: "Agenda de actividades",
   equipo: "Equipo de ventas",
   productos: "Productos",
   valorcliente: "Valor cliente",
-  parametros: "Todos los datos clave en un solo lugar",
+  parametros: "Toda la data clave en un solo lugar",
   reportes: "Reportes",
   supervisor: "Panel del supervisor",
   auditoria: "Auditoría de cambios",
@@ -203,12 +203,12 @@ const SECTION_DESC: Record<Section, string> = {
   clientes: "Cartera de productores: dónde estás y dónde podés llegar.",
   seguimiento: "Aquí la próxima acción a realizar con cada cliente.",
   operaciones: "Oportunidades de venta abiertas por producto y cultivo.",
-  referidos: "Tus nuevos clientes potenciales y su avance.",
+  referidos: "Avances de los nuevos clientes potenciales.",
   actividad: "Registro del proceso sobre cada cliente.",
   equipo: "Desempeño de cada vendedor.",
   productos: "Catálogo de insumos con precios y presentaciones.",
   valorcliente: "El dato clave: calculá el potencial de compra de cada cliente por cultivo.",
-  parametros: "Costos por hectárea, campañas y fórmula de Valor Cliente.",
+  parametros: "Costos por hectárea, campañas y fórmulas de Valor Cliente.",
   reportes: "Comparativos de facturación, oportunidad y captura por vendedor y cultivo.",
   supervisor: "Cronograma de campañas y semáforo de avance por vendedor.",
   auditoria: "Historial de cambios sobre el Valor Cliente.",
@@ -485,7 +485,7 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
               onChange={(e) => patchCultivo(c.id, { ha: e.target.value })}
               placeholder="Ha"
               inputMode="decimal"
-              className="col-span-3 rounded-xl bg-surface px-2 py-2.5 text-right text-[13px] outline-none"
+              className="col-span-3 rounded-xl border border-line bg-white px-2 py-2.5text-right text-[13px] outline-none"
             />
             <span className="col-span-2 text-right text-[12px] font-semibold text-accent">
               {formatUsd(
@@ -1740,7 +1740,7 @@ function Parametros() {
           <input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            className="w-40 rounded-xl bg-surface px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:bg-white focus:ring-primary/20"
+            className="w-40 rounded-xl border border-line bg-white px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:border-primary/40 focus:ring-primary/10"
           />
         </label>
         <label className="flex items-center justify-between gap-3">
@@ -1751,7 +1751,7 @@ function Parametros() {
               type="number"
               value={objetivo}
               onChange={(e) => setObjetivo(Number(e.target.value))}
-              className="w-32 rounded-xl bg-surface px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:bg-white focus:ring-primary/20"
+              className="w-32 rounded-xl border border-line bg-white px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:border-primary/40 focus:ring-primary/10"
             />
           </div>
         </label>
@@ -1774,7 +1774,7 @@ function Parametros() {
                 type="number"
                 value={costos[c] ?? 0}
                 onChange={(e) => setCostos((s) => ({ ...s, [c]: Number(e.target.value) }))}
-                className="w-28 rounded-xl bg-surface px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:bg-white focus:ring-primary/20"
+                className="w-28 rounded-xl border border-line bg-white px-3 py-2 text-right text-[14px] outline-none ring-2 ring-transparent transition-all focus:border-primary/40 focus:ring-primary/10"
               />
             </div>
           </div>
@@ -1801,19 +1801,19 @@ function Parametros() {
               value={c.nombre}
               onChange={(e) => patchCamp(i, { nombre: e.target.value })}
               placeholder="Ej.: Trigo 2026"
-              className="col-span-5 rounded-lg bg-surface px-2 py-2 text-[13px] outline-none"
+              className="col-span-5 rounded-lg border border-line bg-white px-2 py-2text-[13px] outline-none"
             />
             <input
               type="date"
               value={c.inicio}
               onChange={(e) => patchCamp(i, { inicio: e.target.value })}
-              className="col-span-3 rounded-lg bg-surface px-2 py-2 text-[12px] outline-none"
+              className="col-span-3 rounded-lg border border-line bg-white px-2 py-2text-[12px] outline-none"
             />
             <input
               type="date"
               value={c.cierre}
               onChange={(e) => patchCamp(i, { cierre: e.target.value })}
-              className="col-span-3 rounded-lg bg-surface px-2 py-2 text-[12px] outline-none"
+              className="col-span-3 rounded-lg border border-line bg-white px-2 py-2text-[12px] outline-none"
             />
             <button
               type="button"
@@ -1952,14 +1952,14 @@ function Facturacion() {
               type="month"
               value={m.periodo}
               onChange={(e) => patch(i, { periodo: e.target.value })}
-              className="col-span-6 rounded-lg bg-surface px-2 py-2 text-[13px] outline-none"
+              className="col-span-6 rounded-lg border border-line bg-white px-2 py-2text-[13px] outline-none"
             />
             <input
               type="number"
               value={m.monto || 0}
               onChange={(e) => patch(i, { monto: Number(e.target.value) })}
               placeholder="U$S"
-              className="col-span-5 rounded-lg bg-surface px-2 py-2 text-right text-[13px] outline-none"
+              className="col-span-5 rounded-lg border border-line bg-white px-2 py-2text-right text-[13px] outline-none"
             />
             <button
               onClick={() => setMeses((ms) => ms.filter((_, n) => n !== i))}
@@ -2064,9 +2064,9 @@ function ValorClienteScreen() {
   };
 
   const numField =
-    "w-full rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
+    "w-full rounded-lg border border-line bg-white px-2 py-1.5 text-right text-[13px] outline-none transition-colors focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
   const txtField =
-    "w-full rounded-lg bg-surface px-2 py-1.5 text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
+    "w-full rounded-lg border border-line bg-white px-2 py-1.5 text-[13px] outline-none transition-colors focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
 
   return (
     <div className="space-y-4">
@@ -2100,7 +2100,7 @@ function ValorClienteScreen() {
                 <select
                   value={c.cultivo}
                   onChange={(e) => patchCultivo(ci, { cultivo: e.target.value })}
-                  className="rounded-lg bg-surface px-2 py-1.5 text-[14px] font-semibold outline-none"
+                  className="rounded-lg border border-line bg-white px-2 py-1.5text-[14px] font-semibold outline-none"
                 >
                   {CULTIVOS.map((x) => (
                     <option key={x} value={x}>
@@ -2112,7 +2112,7 @@ function ValorClienteScreen() {
                   type="number"
                   value={c.superficieHa || 0}
                   onChange={(e) => patchCultivo(ci, { superficieHa: Number(e.target.value) })}
-                  className="w-20 rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none"
+                  className="w-20 rounded-lg border border-line bg-white px-2 py-1.5text-right text-[13px] outline-none"
                 />
                 <span className="text-[12px] text-ink-muted">ha</span>
               </div>

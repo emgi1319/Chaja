@@ -60,8 +60,8 @@ button {
     min-height: 0;
   }
   .field {
-    @apply w-full rounded-2xl border border-transparent bg-surface px-4 py-3.5 text-[15px] text-ink outline-none ring-4 ring-transparent transition-all duration-150 placeholder:text-ink-muted;
-    @apply focus:border-primary/40 focus:bg-white focus:ring-primary/10;
+    @apply w-full rounded-2xl border border-line bg-white px-4 py-3.5 text-[15px] text-ink shadow-sm outline-none ring-4 ring-transparent transition-all duration-150 placeholder:text-ink-muted;
+    @apply focus:border-primary/40 focus:ring-primary/10;
   }
   .label {
     @apply text-[13px] font-medium text-ink-soft;

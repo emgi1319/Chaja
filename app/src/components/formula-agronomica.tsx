@@ -115,9 +115,9 @@ export function FormulaAgronomica({ onSaved }: { onSaved?: () => void }) {
   };
 
   const numField =
-    "w-full rounded-lg bg-surface px-2 py-1.5 text-right text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
+    "w-full rounded-lg border border-line bg-white px-2 py-1.5text-right text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
   const txtField =
-    "w-full rounded-lg bg-surface px-2 py-1.5 text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
+    "w-full rounded-lg border border-line bg-white px-2 py-1.5text-[13px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20";
 
   return (
     <div className="card space-y-3">

@@ -318,14 +318,14 @@ export function CargarActividad({
                   onChange={(e) => setLinea(l.id, { precio: e.target.value })}
                   placeholder="Precio"
                   inputMode="decimal"
-                  className="col-span-2 rounded-xl bg-surface px-2 py-2.5 text-right text-[13px] outline-none"
+                  className="col-span-2 rounded-xl border border-line bg-white px-2 py-2.5 text-right text-[13px] outline-none transition-colors focus:border-primary/40"
                 />
                 <input
                   value={l.cantidad}
                   onChange={(e) => setLinea(l.id, { cantidad: e.target.value })}
                   placeholder="Cant."
                   inputMode="numeric"
-                  className="col-span-2 rounded-xl bg-surface px-2 py-2.5 text-right text-[13px] outline-none"
+                  className="col-span-2 rounded-xl border border-line bg-white px-2 py-2.5 text-right text-[13px] outline-none transition-colors focus:border-primary/40"
                 />
                 <span className="col-span-2 text-right text-[13px] font-semibold text-accent">
                   {formatUsd(num(l.precio) * num(l.cantidad))}
