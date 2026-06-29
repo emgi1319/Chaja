@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Field, PrimaryButton } from "./ui";
 import { productores } from "../lib/api";
+import type { Contacto } from "../types";
 
 export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () => void }) {
   const p = productores.get(id);
@@ -41,6 +42,59 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
       <PrimaryButton disabled={saving} onClick={guardar}>
         {saving ? "Guardando…" : "Guardar datos"}
       </PrimaryButton>
+    </div>
+  );
+}
+
+// Datos personales/de relación del cliente, igual que el panel "Completar datos"
+// del demo (cumpleaños, estado civil, hobbys, deportes) — se guardan en el contacto.
+export function CompletarDatosCliente({ id, onSaved }: { id: string; onSaved: () => void }) {
+  const p = productores.get(id);
+  const c0 = p?.contactos?.[0];
+  const [email, setEmail] = useState(p?.email ?? c0?.email ?? "");
+  const [movil, setMovil] = useState(p?.celular ?? p?.telefono ?? "");
+  const [nacimiento, setNacimiento] = useState(c0?.fechaNacimiento ?? "");
+  const [estadoCivil, setEstadoCivil] = useState(c0?.situacionFamiliar ?? "");
+  const [hobbys, setHobbys] = useState(c0?.hobbys ?? "");
+  const [deportes, setDeportes] = useState(c0?.preferenciasDeportivas ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const guardar = async () => {
+    if (!p) return;
+    setSaving(true);
+    const base: Contacto = p.contactos?.[0] ?? { nombre: p.razonSocial };
+    const contacto: Contacto = {
+      ...base,
+      email: email.trim() || base.email,
+      fechaNacimiento: nacimiento || undefined,
+      situacionFamiliar: estadoCivil.trim() || undefined,
+      hobbys: hobbys.trim() || undefined,
+      preferenciasDeportivas: deportes.trim() || undefined,
+    };
+    await productores.save({
+      ...p,
+      email: email.trim() || p.email,
+      celular: movil.trim() || p.celular,
+      contactos: [contacto, ...(p.contactos?.slice(1) ?? [])],
+      updatedAt: Date.now(),
+    });
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Email" value={email} onChange={setEmail} type="email" inputMode="email" />
+      <Field label="Móvil" value={movil} onChange={setMovil} inputMode="tel" />
+      <Field label="Fecha de nacimiento" value={nacimiento} onChange={setNacimiento} type="date" />
+      <Field label="Estado civil" value={estadoCivil} onChange={setEstadoCivil} />
+      <Field label="Hobbys" value={hobbys} onChange={setHobbys} />
+      <Field label="Deportes" value={deportes} onChange={setDeportes} />
+      <div className="sm:col-span-2">
+        <PrimaryButton disabled={saving} onClick={guardar}>
+          {saving ? "Guardando…" : "Guardar datos"}
+        </PrimaryButton>
+      </div>
     </div>
   );
 }

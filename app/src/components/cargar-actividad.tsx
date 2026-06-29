@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Mail, MessageCircle, Plus, Trash2 } from "lucide-react";
 import { Dropdown, PrimaryButton, Toast } from "./ui";
-import { EditarDatosCliente } from "./editar-datos-cliente";
+import { CompletarDatosCliente } from "./editar-datos-cliente";
 import { notasCampo, productores } from "../lib/api";
 import { newId } from "../lib/db";
 import { useApp } from "../store";
@@ -73,10 +73,14 @@ export function CargarActividad({
 
   const faltantes = useMemo(() => {
     if (!productor) return [];
+    const c0 = productor.contactos?.[0];
     const f: string[] = [];
-    if (!productor.email) f.push("Email");
-    if (!productor.telefono && !productor.celular) f.push("Teléfono");
-    if (!productor.localidad) f.push("Localidad");
+    if (!productor.email && !c0?.email) f.push("Email");
+    if (!productor.celular && !productor.telefono) f.push("Móvil");
+    if (!c0?.fechaNacimiento) f.push("Fecha de nacimiento");
+    if (!c0?.situacionFamiliar) f.push("Estado civil");
+    if (!c0?.hobbys) f.push("Hobbys");
+    if (!c0?.preferenciasDeportivas) f.push("Deportes");
     return f;
   }, [productor]);
 
@@ -294,7 +298,7 @@ export function CargarActividad({
               ))}
             </div>
           )}
-          <EditarDatosCliente id={productorId} onSaved={() => bump((n) => n + 1)} />
+          <CompletarDatosCliente id={productorId} onSaved={() => bump((n) => n + 1)} />
         </div>
       )}
 
