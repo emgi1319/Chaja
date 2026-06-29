@@ -41,6 +41,7 @@ import {
   Download,
   MapPin,
   Menu,
+  Lightbulb,
 } from "lucide-react";
 import { useApp } from "../store";
 import {
@@ -213,6 +214,81 @@ const SECTION_DESC: Record<Section, string> = {
   auditoria: "Historial de cambios sobre el Valor Cliente.",
   facturacion: "Carga mensual de facturación y scoring de cada cliente.",
 };
+
+// Banner destacado de cada sección (copia del modo "Descripciones" del demo).
+const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
+  inicio: {
+    h: "Tu negocio comercial, de un vistazo",
+    p: "Las métricas clave, las acciones urgentes y la actividad reciente en una sola pantalla. Empezá el día sabiendo dónde están las oportunidades.",
+  },
+  clientes: {
+    h: "Cada productor, con su historia completa",
+    p: "Toda tu cartera ordenada: en qué etapa está cada cliente, su potencial y la próxima acción. La información queda en la empresa, no en una libreta.",
+  },
+  valorcliente: {
+    h: "Cuánto vale cada cliente y cuánto falta capturar",
+    p: "Calculá el potencial según las hectáreas y los cultivos de cada cliente, y descubrí la oportunidad que todavía está sobre la mesa.",
+  },
+  actividad: {
+    h: "Registrá lo que pasa en el campo, en segundos",
+    p: "Visitas, asesorías, presupuestos y ventas, cargados desde el celular o la oficina. Nada se pierde, todo queda documentado.",
+  },
+  seguimiento: {
+    h: "Que ninguna oportunidad se enfríe",
+    p: "Un semáforo te avisa qué clientes necesitan atención antes de que sea tarde. El seguimiento deja de depender de la memoria.",
+  },
+  operaciones: {
+    h: "Seguí cada venta, producto por producto",
+    p: "Mirá qué se está negociando, qué se ganó y qué se perdió, para enfocar el esfuerzo donde más rinde.",
+  },
+  referidos: {
+    h: "Tus mejores clientes traen a los próximos",
+    p: "Capturá y seguí los referidos para convertir la confianza de tus clientes en nuevas ventas.",
+  },
+  productos: {
+    h: "Tu catálogo, siempre a mano",
+    p: "Precios, presentaciones y stock actualizados, listos para armar un presupuesto en el momento.",
+  },
+  reportes: {
+    h: "Decisiones con números, no con corazonadas",
+    p: "La cartera por vendedor, la captura por cultivo y la evolución del negocio, claras y al instante.",
+  },
+  supervisor: {
+    h: "Todo tu equipo bajo control, sin perseguir a nadie",
+    p: "El avance de cada vendedor y el estado de cada campaña con semáforos. La gestión del equipo deja de vivir en el WhatsApp.",
+  },
+  parametros: {
+    h: "Vos definís las reglas del juego",
+    p: "Ajustá los costos por hectárea de cada cultivo y las fechas de cada campaña. El sistema se adapta a cómo trabaja tu empresa.",
+  },
+  equipo: {
+    h: "Tu equipo comercial, en un solo lugar",
+    p: "Quién es quién, sus carteras y su desempeño, para liderar con información y no con suposiciones.",
+  },
+  auditoria: {
+    h: "Cada cambio deja huella",
+    p: "El registro de quién modificó el Valor Cliente y cuándo, para decidir con trazabilidad y confianza.",
+  },
+  facturacion: {
+    h: "La facturación que respalda el scoring",
+    p: "Cargá la facturación mes a mes de cada cliente y obtené su scoring para priorizar dónde poner el foco.",
+  },
+};
+
+function SectionBanner({ section }: { section: Section }) {
+  const b = SECTION_BANNER[section];
+  return (
+    <div className="mb-5 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent-dark">
+        <Lightbulb size={18} />
+      </span>
+      <div className="min-w-0">
+        <h4 className="font-display text-[14px] font-semibold text-ink">{b.h}</h4>
+        <p className="mt-0.5 text-[12.5px] leading-snug text-ink-soft">{b.p}</p>
+      </div>
+    </div>
+  );
+}
 
 const REF_LABEL: Record<string, string> = {
   envie_email: "Envié email",
@@ -2536,6 +2612,7 @@ export function Dashboard() {
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
           className="fade-in flex-1 overflow-y-auto p-4 md:p-6"
         >
+          <SectionBanner section={section} />
           {section === "inicio" && <Inicio />}
           {section === "clientes" && <Clientes />}
           {section === "seguimiento" && <Seguimiento />}
