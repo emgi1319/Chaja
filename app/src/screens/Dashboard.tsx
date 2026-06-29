@@ -58,6 +58,7 @@ import { newId } from "../lib/db";
 import { Dropdown, Field, PrimaryButton } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
+import { EditarDatosCliente } from "../components/editar-datos-cliente";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
@@ -144,7 +145,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "seguimiento", label: "Seguimiento", icon: Filter },
   { key: "operaciones", label: "Operaciones", icon: Boxes },
   { key: "referidos", label: "Referidos", icon: UserPlus },
-  { key: "actividad", label: "Cargar actividad", icon: ClipboardCheck },
+  { key: "actividad", label: "Agenda de actividades", icon: ClipboardCheck },
   { key: "equipo", label: "Equipo", icon: UserCheck },
   { key: "productos", label: "Productos", icon: Package },
   { key: "valorcliente", label: "Valor cliente", icon: Calculator },
@@ -180,16 +181,16 @@ const RAIL_SUP: Section[] = [
 ];
 
 const SECTION_TITLE: Record<Section, string> = {
-  inicio: "Inicio",
-  clientes: "Clientes",
+  inicio: "Tablero de control",
+  clientes: "Clientes y su Valor Cliente",
   seguimiento: "Seguimiento por cliente",
-  operaciones: "Operaciones por producto",
+  operaciones: "Operaciones por cliente y producto",
   referidos: "Referidos",
-  actividad: "Cargar actividad",
+  actividad: "Agenda de actividades",
   equipo: "Equipo de ventas",
   productos: "Productos",
   valorcliente: "Valor cliente",
-  parametros: "Parámetros",
+  parametros: "Todos los datos clave en un solo lugar",
   reportes: "Reportes",
   supervisor: "Panel del supervisor",
   auditoria: "Auditoría de cambios",
@@ -198,16 +199,16 @@ const SECTION_TITLE: Record<Section, string> = {
 
 // Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
 const SECTION_DESC: Record<Section, string> = {
-  inicio: "Resumen comercial de la campaña: avance, oportunidad y alertas.",
-  clientes: "Cartera de productores con su valor potencial y estado comercial.",
-  seguimiento: "Embudo de cada cliente y la próxima acción a realizar.",
+  inicio: "Resumen de la campaña: avances, oportunidades y alertas.",
+  clientes: "Cartera de productores: dónde estás y dónde podés llegar.",
+  seguimiento: "Aquí la próxima acción a realizar con cada cliente.",
   operaciones: "Oportunidades de venta abiertas por producto y cultivo.",
-  referidos: "Prospectos referidos y su avance hasta la venta.",
-  actividad: "Registrá visitas, asesorías y gestiones sobre cada cliente.",
-  equipo: "Desempeño de cada vendedor: facturado, oportunidad y captura.",
+  referidos: "Tus nuevos clientes potenciales y su avance.",
+  actividad: "Registro del proceso sobre cada cliente.",
+  equipo: "Desempeño de cada vendedor.",
   productos: "Catálogo de insumos con precios y presentaciones.",
-  valorcliente: "Calculá el potencial de compra de cada cliente por cultivo.",
-  parametros: "Costos por hectárea, campañas y fórmula agronómica.",
+  valorcliente: "El dato clave: calculá el potencial de compra de cada cliente por cultivo.",
+  parametros: "Costos por hectárea, campañas y fórmula de Valor Cliente.",
   reportes: "Comparativos de facturación, oportunidad y captura por vendedor y cultivo.",
   supervisor: "Cronograma de campañas y semáforo de avance por vendedor.",
   auditoria: "Historial de cambios sobre el Valor Cliente.",
@@ -805,44 +806,46 @@ function Inicio() {
         <p className="mt-1.5 text-[12px] text-ink-muted">{formatPct(avance)} del objetivo alcanzado</p>
       </section>
 
-      <section className="card">
-        <h2 className="flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
-          Ranking de vendedores
-          <InfoTip texto="Ordenado por facturación. El porcentaje es la captura del vendedor: facturado sobre el potencial de su cartera. Tocá un vendedor para ver el detalle." />
-        </h2>
-        <div className="mt-3 space-y-1">
-          {ranking.map((v) => {
-            const ini = v.vendedor
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase();
-            return (
-              <button
-                key={v.vendedor}
-                onClick={() => setPanel({ tipo: "vendedor", nombre: v.vendedor })}
-                className="flex w-full items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
-                  {ini}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="font-medium text-ink">{v.vendedor}</span>
-                    <span className="text-ink-muted">
-                      {formatUsd(v.facturado)} · {formatPct(v.captura)}
-                    </span>
+      {user?.rol !== "vendedor" && (
+        <section className="card">
+          <h2 className="flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
+            Ranking de vendedores
+            <InfoTip texto="Ordenado por facturación. El porcentaje es la captura del vendedor: facturado sobre el potencial de su cartera. Tocá un vendedor para ver el detalle." />
+          </h2>
+          <div className="mt-3 space-y-1">
+            {ranking.map((v) => {
+              const ini = v.vendedor
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase();
+              return (
+                <button
+                  key={v.vendedor}
+                  onClick={() => setPanel({ tipo: "vendedor", nombre: v.vendedor })}
+                  className="flex w-full items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
+                    {ini}
                   </div>
-                  <div className="mt-1">
-                    <Bar pct={(v.facturado / maxFact) * 100} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="font-medium text-ink">{v.vendedor}</span>
+                      <span className="text-ink-muted">
+                        {formatUsd(v.facturado)} · {formatPct(v.captura)}
+                      </span>
+                    </div>
+                    <div className="mt-1">
+                      <Bar pct={(v.facturado / maxFact) * 100} />
+                    </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 flex items-center gap-1.5 font-display text-[15px] font-semibold text-ink">
@@ -919,49 +922,6 @@ function formatFecha(iso?: string): string {
     month: "2-digit",
     year: "numeric",
   });
-}
-
-function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () => void }) {
-  const p = productores.get(id);
-  const [email, setEmail] = useState(p?.email ?? "");
-  const [telefono, setTelefono] = useState(p?.telefono ?? "");
-  const [cuit, setCuit] = useState(p?.cuitRut ?? "");
-  const [credito, setCredito] = useState(p?.creditoAcordado != null ? String(p.creditoAcordado) : "");
-  const [scoring, setScoring] = useState(p?.scoringCrediticio ?? "");
-  const [localidad, setLocalidad] = useState(p?.localidad ?? "");
-  const [saving, setSaving] = useState(false);
-
-  const guardar = async () => {
-    if (!p) return;
-    setSaving(true);
-    const credNum = parseFloat(credito.replace(",", "."));
-    await productores.save({
-      ...p,
-      email: email.trim() || undefined,
-      telefono: telefono.trim() || undefined,
-      cuitRut: cuit.trim() || undefined,
-      creditoAcordado: isNaN(credNum) ? undefined : credNum,
-      scoringCrediticio: scoring.trim() || undefined,
-      localidad: localidad.trim() || undefined,
-      updatedAt: Date.now(),
-    });
-    setSaving(false);
-    onSaved();
-  };
-
-  return (
-    <div className="space-y-3">
-      <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
-      <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
-      <Field label="Número fiscal (CUIT)" value={cuit} onChange={setCuit} inputMode="numeric" />
-      <Field label="Crédito otorgado (U$S)" value={credito} onChange={setCredito} inputMode="decimal" />
-      <Field label="Scoring crediticio" value={scoring} onChange={setScoring} />
-      <Field label="Localidad" value={localidad} onChange={setLocalidad} />
-      <PrimaryButton disabled={saving} onClick={guardar}>
-        {saving ? "Guardando…" : "Guardar datos"}
-      </PrimaryButton>
-    </div>
-  );
 }
 
 function DatoFicha({ label, valor }: { label: string; valor?: string }) {

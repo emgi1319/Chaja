@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Mail, MessageCircle, Plus, Trash2 } from "lucide-react";
 import { Dropdown, PrimaryButton, Toast } from "./ui";
+import { EditarDatosCliente } from "./editar-datos-cliente";
 import { notasCampo, productores } from "../lib/api";
 import { newId } from "../lib/db";
 import { useApp } from "../store";
@@ -52,6 +53,7 @@ export function CargarActividad({
     { id: newId(), productoId: "", precio: "", cantidad: "1" },
   ]);
   const [saved, setSaved] = useState(false);
+  const [, bump] = useState(0);
 
   const productor = productores.get(productorId);
   const hectareas = productor
@@ -267,20 +269,32 @@ export function CargarActividad({
         </div>
       )}
 
-      {actividad === "completar_datos" && (
-        <div className="card">
-          <p className="font-display text-[14px] font-semibold text-ink">Datos faltantes en la ficha</p>
-          {faltantes.length === 0 ? (
-            <p className="mt-2 text-[13px] text-ink-muted">La ficha está completa.</p>
-          ) : (
-            <ul className="mt-2 space-y-1 text-[13px] text-ink-soft">
+      {actividad === "completar_datos" && productor && (
+        <div className="card space-y-3">
+          <div>
+            <p className="font-display text-[14px] font-semibold text-ink">
+              Completar datos de la ficha
+            </p>
+            <p className="text-[12px] text-ink-muted">
+              Completá lo que falte para tener la ficha del cliente al día.
+            </p>
+          </div>
+          {faltantes.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-pill bg-amber/15 px-2.5 py-0.5 text-[12px] font-medium text-amber">
+                {faltantes.length} dato{faltantes.length === 1 ? "" : "s"} sin completar
+              </span>
               {faltantes.map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber" /> {f}
-                </li>
+                <span
+                  key={f}
+                  className="rounded-pill border border-line px-2.5 py-0.5 text-[12px] text-ink-soft"
+                >
+                  {f}
+                </span>
               ))}
-            </ul>
+            </div>
           )}
+          <EditarDatosCliente id={productorId} onSaved={() => bump((n) => n + 1)} />
         </div>
       )}
 
