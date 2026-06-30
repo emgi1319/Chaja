@@ -134,8 +134,8 @@ export function Dropdown<T extends string>({
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className={`flex w-full items-center justify-between rounded-2xl border bg-surface px-4 py-3.5 text-[15px] text-ink transition-all duration-150 active:scale-[0.99] ${
-            open ? "border-primary/40 bg-white ring-4 ring-primary/10" : "border-transparent"
+          className={`flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-[15px] text-ink shadow-sm transition-all duration-150 active:scale-[0.99] ${
+            open ? "border-primary/40 ring-4 ring-primary/10" : "border-line"
           }`}
         >
           <span className={selected ? "" : "text-ink-muted"}>

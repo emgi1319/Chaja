@@ -277,10 +277,11 @@ const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
 
 function SectionBanner({ section }: { section: Section }) {
   const b = SECTION_BANNER[section];
+  const Icon = NAV.find((n) => n.key === section)?.icon ?? Lightbulb;
   return (
     <div className="mb-5 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-4">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent-dark">
-        <Lightbulb size={18} />
+        <Icon size={18} />
       </span>
       <div className="min-w-0">
         <h4 className="font-display text-[14px] font-semibold text-ink">{b.h}</h4>

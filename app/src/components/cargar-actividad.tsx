@@ -6,6 +6,7 @@ import { notasCampo, productores } from "../lib/api";
 import { newId } from "../lib/db";
 import { useApp } from "../store";
 import {
+  CULTIVOS,
   ESTADO_PROCESO_LABEL,
   type EstadoProceso,
   type NotaCampo,
@@ -28,7 +29,16 @@ function num(s: string): number {
   return isNaN(n) ? 0 : n;
 }
 
-type LineaPresup = { id: string; productoId: string; precio: string; cantidad: string };
+type VisitaRow = { id: string; cultivo: string; ha: string; obs: string };
+
+type LineaPresup = {
+  id: string;
+  productoId: string;
+  precio: string;
+  cantidad: string;
+  condiciones: string;
+  observaciones: string;
+};
 
 export function CargarActividad({
   onSaved,
@@ -50,8 +60,13 @@ export function CargarActividad({
   const [conclusiones, setConclusiones] = useState("");
   const [comentarios, setComentarios] = useState("");
   const [lineas, setLineas] = useState<LineaPresup[]>([
-    { id: newId(), productoId: "", precio: "", cantidad: "1" },
+    { id: newId(), productoId: "", precio: "", cantidad: "1", condiciones: "", observaciones: "" },
   ]);
+  const [visitaRows, setVisitaRows] = useState<VisitaRow[]>([
+    { id: newId(), cultivo: "", ha: "", obs: "" },
+  ]);
+  const setVisitaRow = (id: string, p: Partial<VisitaRow>) =>
+    setVisitaRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...p } : r)));
   const [saved, setSaved] = useState(false);
   const [, bump] = useState(0);
 
@@ -104,6 +119,16 @@ export function CargarActividad({
         .join(", ");
       partes.push(`Presupuesto (${formatUsd(total)}): ${items}`);
     }
+    if (actividad === "visita_campo" && visitaRows.some((r) => r.cultivo || r.ha.trim())) {
+      const det = visitaRows
+        .filter((r) => r.cultivo || r.ha.trim())
+        .map(
+          (r) =>
+            `${r.cultivo || "—"}${r.ha.trim() ? ` ${r.ha} ha` : ""}${r.obs.trim() ? ` (${r.obs.trim()})` : ""}`,
+        )
+        .join("; ");
+      partes.push(`Visita: ${det}`);
+    }
     if (conclusiones.trim()) partes.push(`Conclusiones: ${conclusiones.trim()}`);
     if (comentarios.trim()) partes.push(`Asesoría: ${comentarios.trim()}`);
     if (MUEVE_PLATA.includes(actividad) && num(monto) > 0 && actividad !== "presupuesto") {
@@ -132,6 +157,19 @@ export function CargarActividad({
       setSaved(false);
       onSaved?.();
     }, 900);
+  };
+
+  const cancelar = () => {
+    setActividad("inicio_contacto");
+    setObservaciones("");
+    setConclusiones("");
+    setComentarios("");
+    setMonto("");
+    setLineas([
+      { id: newId(), productoId: "", precio: "", cantidad: "1", condiciones: "", observaciones: "" },
+    ]);
+    setVisitaRows([{ id: newId(), cultivo: "", ha: "", obs: "" }]);
+    onSaved?.();
   };
 
   const enviar = (canal: "email" | "wp") => {
@@ -229,7 +267,69 @@ export function CargarActividad({
         ))}
       </div>
 
-      {(actividad === "visita_campo" || actividad === "reunion_oficina") && (
+      {actividad === "visita_campo" && (
+        <div className="card space-y-3">
+          {datosBox}
+          <div className="flex items-center justify-between">
+            <p className="font-display text-[14px] font-semibold text-ink">
+              Detalle de la visita a campo
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setVisitaRows((rs) => [...rs, { id: newId(), cultivo: "", ha: "", obs: "" }])
+              }
+              className="flex items-center gap-1 text-[13px] font-semibold text-primary"
+            >
+              <Plus size={15} /> Agregar fila
+            </button>
+          </div>
+          {visitaRows.map((r) => (
+            <div key={r.id} className="grid grid-cols-12 items-end gap-2">
+              <div className="col-span-5 sm:col-span-3">
+                <Dropdown
+                  value={r.cultivo}
+                  placeholder="Cultivo"
+                  options={CULTIVOS.map((c) => ({ value: c as string, label: c }))}
+                  onChange={(v) => setVisitaRow(r.id, { cultivo: v })}
+                />
+              </div>
+              <input
+                value={r.ha}
+                onChange={(e) => setVisitaRow(r.id, { ha: e.target.value })}
+                placeholder="Ha"
+                inputMode="decimal"
+                className="col-span-3 sm:col-span-2 rounded-lg border border-line bg-white px-2 py-2.5 text-right text-[13px] outline-none focus:border-primary/40"
+              />
+              <input
+                value={r.obs}
+                onChange={(e) => setVisitaRow(r.id, { obs: e.target.value })}
+                placeholder="Observaciones"
+                className="col-span-3 sm:col-span-6 rounded-lg border border-line bg-white px-2 py-2.5 text-[13px] outline-none focus:border-primary/40"
+              />
+              <button
+                type="button"
+                onClick={() => setVisitaRows((rs) => rs.filter((x) => x.id !== r.id))}
+                className="col-span-1 p-1.5 text-ink-muted active:opacity-60"
+                aria-label="Quitar fila"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          <label className="block space-y-1.5">
+            <span className="label">Conclusiones de la visita</span>
+            <textarea
+              value={conclusiones}
+              onChange={(e) => setConclusiones(e.target.value)}
+              rows={3}
+              className="field"
+            />
+          </label>
+        </div>
+      )}
+
+      {actividad === "reunion_oficina" && (
         <div className="card space-y-3">
           {datosBox}
           <label className="block space-y-1.5">
@@ -304,59 +404,116 @@ export function CargarActividad({
 
       {actividad === "presupuesto" && (
         <div className="card space-y-3">
-          <p className="font-display text-[14px] font-semibold text-ink">Presupuesto</p>
-          {lineas.map((l) => {
-            const prod = catalogo.find((p) => p.id === l.productoId);
-            return (
-              <div key={l.id} className="grid grid-cols-12 items-end gap-2">
-                <div className="col-span-5">
-                  <Dropdown
-                    value={l.productoId}
-                    placeholder="Producto"
-                    options={catalogo.map((p) => ({ value: p.id, label: p.nombre }))}
-                    onChange={(v) => onProducto(l.id, v)}
-                  />
-                </div>
-                <input
-                  value={l.precio}
-                  onChange={(e) => setLinea(l.id, { precio: e.target.value })}
-                  placeholder="Precio"
-                  inputMode="decimal"
-                  className="col-span-2 rounded-xl border border-line bg-white px-2 py-2.5 text-right text-[13px] outline-none transition-colors focus:border-primary/40"
-                />
-                <input
-                  value={l.cantidad}
-                  onChange={(e) => setLinea(l.id, { cantidad: e.target.value })}
-                  placeholder="Cant."
-                  inputMode="numeric"
-                  className="col-span-2 rounded-xl border border-line bg-white px-2 py-2.5 text-right text-[13px] outline-none transition-colors focus:border-primary/40"
-                />
-                <span className="col-span-2 text-right text-[13px] font-semibold text-accent">
-                  {formatUsd(num(l.precio) * num(l.cantidad))}
-                </span>
-                <button
-                  onClick={() => setLineas((ls) => ls.filter((x) => x.id !== l.id))}
-                  className="col-span-1 p-1 text-ink-muted active:opacity-60"
-                  aria-label="Quitar"
-                >
-                  <Trash2 size={16} />
-                </button>
-                {prod && typeof prod.stock === "number" && num(l.cantidad) > prod.stock && (
-                  <span className="col-span-12 text-[11px] text-danger">stock insuficiente</span>
-                )}
-              </div>
-            );
-          })}
           <div className="flex items-center justify-between">
+            <p className="font-display text-[14px] font-semibold text-ink">Presupuesto</p>
             <button
+              type="button"
               onClick={() =>
-                setLineas((ls) => [...ls, { id: newId(), productoId: "", precio: "", cantidad: "1" }])
+                setLineas((ls) => [
+                  ...ls,
+                  { id: newId(), productoId: "", precio: "", cantidad: "1", condiciones: "", observaciones: "" },
+                ])
               }
-              className="flex items-center gap-1 text-[13px] font-semibold text-primary"
+              className="flex items-center gap-1 rounded-2xl border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-primary transition-colors hover:bg-surface"
             >
               <Plus size={15} /> Agregar producto
             </button>
-            <span className="text-[14px] font-semibold text-ink">Total: {formatUsd(total)}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-[13px]">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-ink-muted">
+                  <th className="px-2 py-1.5 font-medium">Producto</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Precio unit.</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Cant.</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Subtotal</th>
+                  <th className="px-2 py-1.5 font-medium">Condiciones</th>
+                  <th className="px-2 py-1.5 font-medium">Observaciones</th>
+                  <th className="px-2 py-1.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {lineas.map((l) => {
+                  const prod = catalogo.find((p) => p.id === l.productoId);
+                  const low =
+                    prod && typeof prod.stock === "number" && num(l.cantidad) > prod.stock;
+                  return (
+                    <tr key={l.id} className="border-t border-line align-top">
+                      <td className="px-2 py-2">
+                        <select
+                          value={l.productoId}
+                          onChange={(e) => onProducto(l.id, e.target.value)}
+                          className="w-44 rounded-lg border border-line bg-white px-2 py-2 outline-none focus:border-primary/40"
+                        >
+                          <option value="">— Producto —</option>
+                          {catalogo.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        {low && <p className="mt-1 text-[11px] text-danger">stock insuficiente</p>}
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          value={l.precio}
+                          onChange={(e) => setLinea(l.id, { precio: e.target.value })}
+                          placeholder="0"
+                          inputMode="decimal"
+                          className="w-20 rounded-lg border border-line bg-white px-2 py-2 text-right outline-none focus:border-primary/40"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          value={l.cantidad}
+                          onChange={(e) => setLinea(l.id, { cantidad: e.target.value })}
+                          placeholder="1"
+                          inputMode="numeric"
+                          className="w-16 rounded-lg border border-line bg-white px-2 py-2 text-right outline-none focus:border-primary/40"
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-right font-semibold text-accent">
+                        {formatUsd(num(l.precio) * num(l.cantidad))}
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          value={l.condiciones}
+                          onChange={(e) => setLinea(l.id, { condiciones: e.target.value })}
+                          placeholder="Ej.: 30 días"
+                          className="w-32 rounded-lg border border-line bg-white px-2 py-2 outline-none focus:border-primary/40"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          value={l.observaciones}
+                          onChange={(e) => setLinea(l.id, { observaciones: e.target.value })}
+                          placeholder="Notas"
+                          className="w-36 rounded-lg border border-line bg-white px-2 py-2 outline-none focus:border-primary/40"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setLineas((ls) => ls.filter((x) => x.id !== l.id))}
+                          className="p-1 text-ink-muted active:opacity-60"
+                          aria-label="Quitar"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[12px] text-ink-muted">
+              El precio se completa solo desde la base de productos; podés modificarlo si lo necesitás.
+            </p>
+            <span className="shrink-0 text-[14px] font-semibold text-ink">
+              Total: {formatUsd(total)}
+            </span>
           </div>
           <div className="flex flex-wrap gap-2 border-t border-line pt-3">
             <button
@@ -403,10 +560,19 @@ export function CargarActividad({
         />
       </label>
 
-      <div className="sm:max-w-xs">
-        <PrimaryButton disabled={saved} onClick={guardar}>
-          {saved ? "Guardada" : "Guardar actividad"}
-        </PrimaryButton>
+      <div className="flex items-center justify-end gap-2 border-t border-line pt-4">
+        <button
+          type="button"
+          onClick={cancelar}
+          className="rounded-2xl border border-line bg-white px-5 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          Cancelar
+        </button>
+        <div className="w-44">
+          <PrimaryButton disabled={saved} onClick={guardar}>
+            {saved ? "Guardada" : "Guardar actividad"}
+          </PrimaryButton>
+        </div>
       </div>
       <Toast show={saved} message="Actividad guardada" />
     </div>
