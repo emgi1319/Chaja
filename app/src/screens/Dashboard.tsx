@@ -56,7 +56,7 @@ import {
   type AuditoriaEvento,
 } from "../lib/api";
 import { newId } from "../lib/db";
-import { Dropdown, Field, PrimaryButton } from "../components/ui";
+import { DateField, Dropdown, Field, PrimaryButton } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import { EditarDatosCliente } from "../components/editar-datos-cliente";
@@ -175,6 +175,7 @@ const RAIL_SUP: Section[] = [
   "operaciones",
   "reportes",
   "supervisor",
+  "parametros",
   "facturacion",
   "equipo",
   "productos",
@@ -520,15 +521,7 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
       <Field label="Referidor" value={referidor} onChange={setReferidor} />
       <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
       <Field label="Móvil" value={movil} onChange={setMovil} inputMode="tel" />
-      <label className="block space-y-1.5">
-        <span className="label">Fecha de nacimiento</span>
-        <input
-          type="date"
-          value={fechaNacimiento}
-          onChange={(e) => setFechaNacimiento(e.target.value)}
-          className="field"
-        />
-      </label>
+      <DateField label="Fecha de nacimiento" value={fechaNacimiento} onChange={setFechaNacimiento} />
       <Field label="Estado civil" value={estadoCivil} onChange={setEstadoCivil} />
       <Dropdown
         label="Proceso"
@@ -561,7 +554,7 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
               onChange={(e) => patchCultivo(c.id, { ha: e.target.value })}
               placeholder="Ha"
               inputMode="decimal"
-              className="col-span-3 rounded-xl border border-line bg-white px-2 py-2.5text-right text-[13px] outline-none"
+              className="col-span-3 rounded-xl border border-line bg-white px-2 py-2.5 text-right text-[13px] outline-none"
             />
             <span className="col-span-2 text-right text-[12px] font-semibold text-accent">
               {formatUsd(
@@ -594,9 +587,11 @@ function ReferidoForm({ onSaved }: { onSaved: () => void }) {
           className="field"
         />
       </label>
-      <PrimaryButton disabled={saving || !nombre.trim()} onClick={guardar}>
-        {saving ? "Guardando…" : "Guardar referido"}
-      </PrimaryButton>
+      <div className="sticky bottom-0 -mx-5 -mb-4 border-t border-line bg-white px-5 py-3">
+        <PrimaryButton disabled={saving || !nombre.trim()} onClick={guardar}>
+          {saving ? "Guardando…" : "Guardar referido"}
+        </PrimaryButton>
+      </div>
     </div>
   );
 }
@@ -642,9 +637,11 @@ function ProductoForm({ onSaved }: { onSaved: () => void }) {
       <Field label="Presentación" value={presentacion} onChange={setPresentacion} />
       <Field label="Precio (U$S)" value={precio} onChange={setPrecio} inputMode="decimal" />
       <Field label="Stock" value={stock} onChange={setStock} inputMode="numeric" />
-      <PrimaryButton disabled={saving || !nombre.trim()} onClick={guardar}>
-        {saving ? "Guardando…" : "Guardar producto"}
-      </PrimaryButton>
+      <div className="sticky bottom-0 -mx-5 -mb-4 border-t border-line bg-white px-5 py-3">
+        <PrimaryButton disabled={saving || !nombre.trim()} onClick={guardar}>
+          {saving ? "Guardando…" : "Guardar producto"}
+        </PrimaryButton>
+      </div>
     </div>
   );
 }
@@ -1012,6 +1009,7 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
   const [histOpen, setHistOpen] = useState(false);
   const [actOpen, setActOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [bcraOpen, setBcraOpen] = useState(false);
   const [, bump] = useState(0);
 
   if (!productor || !row) return null;
@@ -1133,6 +1131,12 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
               Scoring {scoreCliente.score}/100 · {scoreCliente.categoria}
             </span>
             <button
+              onClick={() => setBcraOpen(true)}
+              className="text-[13px] font-semibold text-primary hover:underline"
+            >
+              Situación crediticia BCRA
+            </button>
+            <button
               onClick={() => setEditOpen(true)}
               className="text-[13px] font-semibold text-primary hover:underline"
             >
@@ -1152,6 +1156,28 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
           <DatoFicha label="Localidad" valor={productor.localidad} />
         </dl>
       </div>
+
+      <Drawer open={bcraOpen} onClose={() => setBcraOpen(false)} title="Situación crediticia BCRA">
+        <div className="space-y-2">
+          <p className="text-[12px] text-ink-muted">
+            Central de deudores del BCRA. Consultá con el CUIT del cliente
+            {productor.cuitRut ? `: ${productor.cuitRut}` : ""}.
+          </p>
+          <iframe
+            src="https://www.bcra.gob.ar/situacion-crediticia/"
+            title="Situación crediticia BCRA"
+            className="h-[65vh] w-full rounded-xl border border-line bg-white"
+          />
+          <a
+            href="https://www.bcra.gob.ar/situacion-crediticia/"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block text-[12px] font-medium text-primary hover:underline"
+          >
+            Abrir en una pestaña nueva
+          </a>
+        </div>
+      </Drawer>
 
       <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Editar datos del cliente">
         <EditarDatosCliente
@@ -1286,6 +1312,7 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
 
       <Drawer open={actOpen} onClose={() => setActOpen(false)} title="Cargar actividad">
         <CargarActividad
+          enDrawer
           productorId={id}
           onSaved={() => {
             setActOpen(false);
@@ -1426,6 +1453,7 @@ function Clientes() {
 
 function Equipo() {
   const vendedores = vendedoresResumen();
+  const [detalle, setDetalle] = useState<string | null>(null);
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {vendedores.map((v) => {
@@ -1436,7 +1464,11 @@ function Equipo() {
           .slice(0, 2)
           .toUpperCase();
         return (
-          <div key={v.vendedor} className="card card-hover space-y-2">
+          <button
+            key={v.vendedor}
+            onClick={() => setDetalle(v.vendedor)}
+            className="card card-hover space-y-2 text-left"
+          >
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-tint text-[12px] font-semibold text-primary-dark">
                 {ini}
@@ -1454,9 +1486,16 @@ function Equipo() {
             </p>
             <Bar pct={v.captura * 100} tone={v.captura >= 0.7 ? "accent" : "amber"} />
             <p className="text-[12px] text-ink-muted">{formatPct(v.captura)} capturado</p>
-          </div>
+          </button>
         );
       })}
+      <Drawer
+        open={detalle != null}
+        onClose={() => setDetalle(null)}
+        title={detalle ?? ""}
+      >
+        {detalle && <PanelVendedor nombre={detalle} />}
+      </Drawer>
     </div>
   );
 }
@@ -1787,7 +1826,7 @@ function Reportes() {
   );
 }
 
-function Parametros() {
+function Parametros({ onVolver }: { onVolver?: () => void }) {
   const cfg = getConfig();
   const refresh = useApp((s) => s.refresh);
   const [costos, setCostos] = useState<Record<string, number>>(cfg.costosHa);
@@ -1807,6 +1846,14 @@ function Parametros() {
   };
   return (
     <div className="max-w-2xl space-y-4">
+      {onVolver && (
+        <button
+          onClick={onVolver}
+          className="flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
+        >
+          <ArrowLeft size={16} /> Volver al panel del supervisor
+        </button>
+      )}
       <FormulaAgronomica onSaved={() => void refresh()} />
       <div className="card space-y-3">
         <p className="font-display text-[14px] font-semibold text-ink">Campaña</p>
@@ -1876,20 +1923,22 @@ function Parametros() {
               value={c.nombre}
               onChange={(e) => patchCamp(i, { nombre: e.target.value })}
               placeholder="Ej.: Trigo 2026"
-              className="col-span-5 rounded-lg border border-line bg-white px-2 py-2text-[13px] outline-none"
+              className="col-span-5 rounded-lg border border-line bg-white px-2 py-2 text-[13px] outline-none"
             />
-            <input
-              type="date"
-              value={c.inicio}
-              onChange={(e) => patchCamp(i, { inicio: e.target.value })}
-              className="col-span-3 rounded-lg border border-line bg-white px-2 py-2text-[12px] outline-none"
-            />
-            <input
-              type="date"
-              value={c.cierre}
-              onChange={(e) => patchCamp(i, { cierre: e.target.value })}
-              className="col-span-3 rounded-lg border border-line bg-white px-2 py-2text-[12px] outline-none"
-            />
+            <div className="col-span-3">
+              <DateField
+                value={c.inicio}
+                onChange={(v) => patchCamp(i, { inicio: v })}
+                className="w-full rounded-lg border border-line bg-white px-2 py-2 text-[12px] outline-none focus:border-primary/40"
+              />
+            </div>
+            <div className="col-span-3">
+              <DateField
+                value={c.cierre}
+                onChange={(v) => patchCamp(i, { cierre: v })}
+                className="w-full rounded-lg border border-line bg-white px-2 py-2 text-[12px] outline-none focus:border-primary/40"
+              />
+            </div>
             <button
               type="button"
               onClick={() => setCamps((cs) => cs.filter((_, n) => n !== i))}
@@ -2027,14 +2076,14 @@ function Facturacion() {
               type="month"
               value={m.periodo}
               onChange={(e) => patch(i, { periodo: e.target.value })}
-              className="col-span-6 rounded-lg border border-line bg-white px-2 py-2text-[13px] outline-none"
+              className="col-span-6 rounded-lg border border-line bg-white px-2 py-2 text-[13px] outline-none"
             />
             <input
               type="number"
               value={m.monto || 0}
               onChange={(e) => patch(i, { monto: Number(e.target.value) })}
               placeholder="U$S"
-              className="col-span-5 rounded-lg border border-line bg-white px-2 py-2text-right text-[13px] outline-none"
+              className="col-span-5 rounded-lg border border-line bg-white px-2 py-2 text-right text-[13px] outline-none"
             />
             <button
               onClick={() => setMeses((ms) => ms.filter((_, n) => n !== i))}
@@ -2175,7 +2224,7 @@ function ValorClienteScreen() {
                 <select
                   value={c.cultivo}
                   onChange={(e) => patchCultivo(ci, { cultivo: e.target.value })}
-                  className="rounded-lg border border-line bg-white px-2 py-1.5text-[14px] font-semibold outline-none"
+                  className="rounded-lg border border-line bg-white px-2 py-1.5 text-[14px] font-semibold outline-none"
                 >
                   {CULTIVOS.map((x) => (
                     <option key={x} value={x}>
@@ -2187,7 +2236,7 @@ function ValorClienteScreen() {
                   type="number"
                   value={c.superficieHa || 0}
                   onChange={(e) => patchCultivo(ci, { superficieHa: Number(e.target.value) })}
-                  className="w-20 rounded-lg border border-line bg-white px-2 py-1.5text-right text-[13px] outline-none"
+                  className="w-20 rounded-lg border border-line bg-white px-2 py-1.5 text-right text-[13px] outline-none"
                 />
                 <span className="text-[12px] text-ink-muted">ha</span>
               </div>
@@ -2469,6 +2518,7 @@ export function Dashboard() {
     });
   const dataVersion = useApp((s) => s.dataVersion);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paramBack, setParamBack] = useState(false);
   const pend = pendingTotal();
 
   return (
@@ -2525,6 +2575,7 @@ export function Dashboard() {
                 key={n.key}
                 onClick={() => {
                   setSection(n.key);
+                  setParamBack(false);
                   setMobileOpen(false);
                 }}
                 title={n.label}
@@ -2619,14 +2670,23 @@ export function Dashboard() {
           {section === "seguimiento" && <Seguimiento />}
           {section === "operaciones" && <Operaciones />}
           {section === "referidos" && <Referidos />}
-          {section === "actividad" && <CargarActividad />}
+          {section === "actividad" && (
+            <CargarActividad onIrValorCliente={() => setSection("valorcliente")} />
+          )}
           {section === "equipo" && <Equipo />}
           {section === "productos" && <Productos />}
           {section === "valorcliente" && <ValorClienteScreen />}
-          {section === "parametros" && <Parametros />}
+          {section === "parametros" && (
+            <Parametros onVolver={paramBack ? () => setSection("supervisor") : undefined} />
+          )}
           {section === "reportes" && <Reportes />}
           {section === "supervisor" && (
-            <PanelSupervisor onParametros={() => setSection("parametros")} />
+            <PanelSupervisor
+              onParametros={() => {
+                setParamBack(true);
+                setSection("parametros");
+              }}
+            />
           )}
           {section === "auditoria" && <Auditoria />}
           {section === "facturacion" && <Facturacion />}

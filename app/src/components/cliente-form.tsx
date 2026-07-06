@@ -36,7 +36,16 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [geoManual, setGeoManual] = useState(false);
+  const [latManual, setLatManual] = useState("");
+  const [lngManual, setLngManual] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const coordsFinal = geoManual
+    ? latManual.trim() && lngManual.trim()
+      ? { lat: num(latManual), lng: num(lngManual) }
+      : null
+    : coords;
 
   const valorTotal = cultivos.reduce((acc, c) => acc + valorCultivo(toCultivo(c)), 0);
   const patch = (id: string, p: Partial<CultivoDraft>) =>
@@ -57,7 +66,12 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
       creditoAcordado: num(credito) || undefined,
       contactos: [],
       unidades: [
-        { id: newId(), lat: coords?.lat, lng: coords?.lng, cultivos: cultivos.map(toCultivo) },
+        {
+          id: newId(),
+          lat: coordsFinal?.lat,
+          lng: coordsFinal?.lng,
+          cultivos: cultivos.map(toCultivo),
+        },
       ],
       creadoPor: user?.nombre,
       updatedAt: Date.now(),
@@ -96,22 +110,52 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
           }))}
           onChange={setCampania}
         />
-        <button
-          type="button"
-          onClick={async () => {
-            setGeoLoading(true);
-            setCoords(await getPosicion());
-            setGeoLoading(false);
-          }}
-          className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
-        >
-          <MapPin size={15} className="text-primary" />
-          {coords
-            ? `Ubicación: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
-            : geoLoading
-              ? "Obteniendo ubicación…"
-              : "Usar mi ubicación (georreferenciar)"}
-        </button>
+        <div className="space-y-2 rounded-2xl border border-line p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="label">Ubicación del establecimiento</span>
+            <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink-soft">
+              Cargar manualmente
+              <button
+                type="button"
+                role="switch"
+                aria-checked={geoManual}
+                onClick={() => setGeoManual((m) => !m)}
+                className={`relative h-5 w-9 rounded-pill transition-colors ${
+                  geoManual ? "bg-primary" : "bg-line"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-card transition-all ${
+                    geoManual ? "left-[18px]" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </label>
+          </div>
+          {geoManual ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Latitud" value={latManual} onChange={setLatManual} inputMode="decimal" placeholder="-34.6037" />
+              <Field label="Longitud" value={lngManual} onChange={setLngManual} inputMode="decimal" placeholder="-58.3816" />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                setGeoLoading(true);
+                setCoords(await getPosicion());
+                setGeoLoading(false);
+              }}
+              className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+            >
+              <MapPin size={15} className="text-primary" />
+              {coords
+                ? `Ubicación: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                : geoLoading
+                  ? "Obteniendo ubicación…"
+                  : "Usar mi ubicación (georreferenciar)"}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">

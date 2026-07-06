@@ -44,7 +44,7 @@ export function Drawer({
           </button>
         </div>
         <div
-          className="no-scrollbar flex-1 overflow-y-auto px-5 py-4"
+          className="flex-1 overflow-y-auto px-5 py-4"
           style={footer ? undefined : { paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         >
           {children}

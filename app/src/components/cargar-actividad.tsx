@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, MessageCircle, Plus, Trash2 } from "lucide-react";
-import { Dropdown, PrimaryButton, Toast } from "./ui";
+import { ArrowRight, Clock, Mail, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { DateField, Dropdown, PrimaryButton, Toast } from "./ui";
+import { Drawer } from "./drawer";
 import { CompletarDatosCliente } from "./editar-datos-cliente";
 import { notasCampo, productores } from "../lib/api";
 import { newId } from "../lib/db";
@@ -15,7 +16,10 @@ import { formatUsd } from "../lib/valor-cliente";
 import { getNombreCampania } from "../lib/parametros";
 
 const GRUPOS: { grupo: string; estados: EstadoProceso[] }[] = [
-  { grupo: "Prospección", estados: ["inicio_contacto", "completar_datos", "agenda_visita"] },
+  {
+    grupo: "Prospección",
+    estados: ["inicio_contacto", "completar_datos", "agenda_visita", "carga_valor_cliente"],
+  },
   { grupo: "Desarrollo", estados: ["visita_campo", "reunion_oficina", "asesoria", "presupuesto"] },
   { grupo: "Cierre", estados: ["en_proceso", "negociacion", "venta", "no_venta"] },
   { grupo: "Posventa", estados: ["facturacion", "cobranza"] },
@@ -43,9 +47,13 @@ type LineaPresup = {
 export function CargarActividad({
   onSaved,
   productorId: initialId,
+  enDrawer,
+  onIrValorCliente,
 }: {
   onSaved?: () => void;
   productorId?: string;
+  enDrawer?: boolean;
+  onIrValorCliente?: () => void;
 }) {
   const catalogo = useApp((s) => s.catalogo);
   const user = useApp((s) => s.user);
@@ -68,6 +76,7 @@ export function CargarActividad({
   const setVisitaRow = (id: string, p: Partial<VisitaRow>) =>
     setVisitaRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...p } : r)));
   const [saved, setSaved] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
   const [, bump] = useState(0);
 
   const productor = productores.get(productorId);
@@ -140,6 +149,32 @@ export function CargarActividad({
 
   const guardar = async () => {
     if (!productor) return;
+    // Los cultivos relevados en la visita alimentan el valor cliente: los que no
+    // estaban en la ficha se agregan y los existentes actualizan su superficie.
+    if (actividad === "visita_campo") {
+      const relevados = visitaRows.filter((r) => r.cultivo);
+      if (relevados.length) {
+        const unidades = productor.unidades.length
+          ? productor.unidades.map((u) => ({ ...u, cultivos: u.cultivos.map((c) => ({ ...c })) }))
+          : [{ id: newId(), cultivos: [] as typeof productor.unidades[0]["cultivos"] }];
+        const u0 = unidades[0];
+        let cambio = false;
+        for (const r of relevados) {
+          const ha = num(r.ha);
+          const existente = u0.cultivos.find((c) => c.cultivo === r.cultivo);
+          if (!existente) {
+            u0.cultivos.push({ id: newId(), cultivo: r.cultivo, superficieHa: ha, facturado: 0 });
+            cambio = true;
+          } else if (ha > 0 && existente.superficieHa !== ha) {
+            existente.superficieHa = ha;
+            cambio = true;
+          }
+        }
+        if (cambio) {
+          await productores.save({ ...productor, unidades, updatedAt: Date.now() });
+        }
+      }
+    }
     const nota: NotaCampo = {
       id: newId(),
       fechaContacto: new Date(`${fecha}T10:00:00`).toISOString(),
@@ -155,7 +190,8 @@ export function CargarActividad({
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
-      onSaved?.();
+      if (onSaved) onSaved();
+      else setHistOpen(true);
     }, 900);
   };
 
@@ -218,12 +254,28 @@ export function CargarActividad({
     </div>
   );
 
+  const notasCliente = notasCampo
+    .list()
+    .filter((n) => n.productorId === productorId)
+    .sort((a, b) => new Date(b.fechaContacto).getTime() - new Date(a.fechaContacto).getTime());
+
   return (
     <div className="space-y-4">
-      <p className="text-[13px] text-ink-muted">
-        {productor?.razonSocial} · Vendedor: {productor?.vendedor || "—"} · Campaña{" "}
-        {getNombreCampania()}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13px] text-ink-muted">
+          {productor?.razonSocial} · Vendedor: {productor?.vendedor || "—"} · Campaña{" "}
+          {getNombreCampania()}
+        </p>
+        {!enDrawer && (
+          <button
+            type="button"
+            onClick={() => setHistOpen(true)}
+            className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+          >
+            <Clock size={15} /> Historial
+          </button>
+        )}
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Dropdown
@@ -370,6 +422,25 @@ export function CargarActividad({
               <MessageCircle size={15} /> WhatsApp
             </button>
           </div>
+        </div>
+      )}
+
+      {actividad === "carga_valor_cliente" && (
+        <div className="card space-y-3">
+          {datosBox}
+          <p className="text-[13px] text-ink-soft">
+            Registrá la carga o actualización del valor cliente: hectáreas por cultivo y canasta
+            de insumos. El cálculo se hace en la pantalla Valor cliente.
+          </p>
+          {onIrValorCliente && (
+            <button
+              type="button"
+              onClick={onIrValorCliente}
+              className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2 text-[13px] font-semibold text-primary transition-colors hover:bg-surface"
+            >
+              Ir a Valor cliente <ArrowRight size={15} />
+            </button>
+          )}
         </div>
       )}
 
@@ -545,10 +616,7 @@ export function CargarActividad({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1.5">
-          <span className="label">Fecha</span>
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="field" />
-        </label>
+        <DateField label="Fecha" value={fecha} onChange={setFecha} />
       </div>
       <label className="block space-y-1.5">
         <span className="label">Observaciones</span>
@@ -560,7 +628,11 @@ export function CargarActividad({
         />
       </label>
 
-      <div className="flex items-center justify-end gap-2 border-t border-line pt-4">
+      <div
+        className={`flex items-center justify-end gap-2 border-t border-line ${
+          enDrawer ? "sticky bottom-0 z-10 -mx-5 -mb-4 bg-white px-5 py-3" : "pt-4"
+        }`}
+      >
         <button
           type="button"
           onClick={cancelar}
@@ -575,6 +647,29 @@ export function CargarActividad({
         </div>
       </div>
       <Toast show={saved} message="Actividad guardada" />
+
+      <Drawer open={histOpen} onClose={() => setHistOpen(false)} title="Historial">
+        {notasCliente.length === 0 ? (
+          <p className="text-[13px] text-ink-muted">Sin actividades registradas para este cliente.</p>
+        ) : (
+          <div className="space-y-3">
+            {notasCliente.map((n) => (
+              <div key={n.id} className="rounded-2xl border border-line p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[12px] font-medium text-primary-dark">
+                    {ESTADO_PROCESO_LABEL[n.actividad]}
+                  </span>
+                  <span className="text-[12px] text-ink-muted">
+                    {new Date(n.fechaContacto).toLocaleDateString("es-AR")}
+                  </span>
+                </div>
+                {n.notaVisita && <p className="mt-1.5 text-[13px] text-ink-soft">{n.notaVisita}</p>}
+                <p className="mt-1 text-[11px] text-ink-muted">{n.creadoPor ?? ""}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

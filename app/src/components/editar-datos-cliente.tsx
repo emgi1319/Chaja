@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Field, PrimaryButton } from "./ui";
+import { DateField, Field, PrimaryButton } from "./ui";
 import { productores } from "../lib/api";
 import type { Contacto } from "../types";
 
@@ -39,9 +39,11 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
       <Field label="Crédito otorgado (U$S)" value={credito} onChange={setCredito} inputMode="decimal" />
       <Field label="Scoring crediticio" value={scoring} onChange={setScoring} />
       <Field label="Localidad" value={localidad} onChange={setLocalidad} />
-      <PrimaryButton disabled={saving} onClick={guardar}>
-        {saving ? "Guardando…" : "Guardar datos"}
-      </PrimaryButton>
+      <div className="sticky bottom-0 -mx-5 -mb-4 border-t border-line bg-white px-5 py-3">
+        <PrimaryButton disabled={saving} onClick={guardar}>
+          {saving ? "Guardando…" : "Guardar datos"}
+        </PrimaryButton>
+      </div>
     </div>
   );
 }
@@ -86,7 +88,7 @@ export function CompletarDatosCliente({ id, onSaved }: { id: string; onSaved: ()
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="Email" value={email} onChange={setEmail} type="email" inputMode="email" />
       <Field label="Móvil" value={movil} onChange={setMovil} inputMode="tel" />
-      <Field label="Fecha de nacimiento" value={nacimiento} onChange={setNacimiento} type="date" />
+      <DateField label="Fecha de nacimiento" value={nacimiento} onChange={setNacimiento} />
       <Field label="Estado civil" value={estadoCivil} onChange={setEstadoCivil} />
       <Field label="Hobbys" value={hobbys} onChange={setHobbys} />
       <Field label="Deportes" value={deportes} onChange={setDeportes} />

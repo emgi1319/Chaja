@@ -40,6 +40,18 @@ const DEFAULT_FORMULA: FormulaInsumo[] = [
   { cultivo: "Sorgo", tipo: "Fertilizante", insumo: "Urea", dosis: 4, unidad: "bolsa", costoUnit: 28 },
 ];
 
+const DEFAULT_TIPOS = [
+  "Semilla",
+  "Fertilizante",
+  "Herbicida",
+  "Fungicida",
+  "Insecticida",
+  "Inoculante",
+  "Coadyuvante",
+  "Curasemilla",
+  "Otros",
+];
+
 const KEY = "chaja.parametros";
 const LEGACY_COSTOS_KEY = "chaja.costos_ha";
 
@@ -49,6 +61,7 @@ export interface Config {
   nombreCampania: string;
   campanias: Campania[];
   formula: FormulaInsumo[];
+  tiposInsumo: string[];
 }
 
 export function costosHaDesdeFormula(formula: FormulaInsumo[]): Record<string, number> {
@@ -75,6 +88,7 @@ function migrateLegacy(): Config {
     nombreCampania: DEFAULT_CAMPANIA,
     campanias: DEFAULT_CAMPANIAS,
     formula: DEFAULT_FORMULA,
+    tiposInsumo: DEFAULT_TIPOS,
   };
 }
 
@@ -89,6 +103,7 @@ function readCache(): Config {
         nombreCampania: c.nombreCampania ?? DEFAULT_CAMPANIA,
         campanias: c.campanias && c.campanias.length > 0 ? c.campanias : DEFAULT_CAMPANIAS,
         formula: c.formula && c.formula.length > 0 ? c.formula : DEFAULT_FORMULA,
+        tiposInsumo: c.tiposInsumo && c.tiposInsumo.length > 0 ? c.tiposInsumo : DEFAULT_TIPOS,
       };
     }
   } catch {
@@ -127,6 +142,21 @@ export function getCampanias(): Campania[] {
 
 export function getFormula(): FormulaInsumo[] {
   return readCache().formula;
+}
+
+export function getTiposInsumo(): string[] {
+  return readCache().tiposInsumo;
+}
+
+export function addTipoInsumo(nombre: string): string[] {
+  const c = readCache();
+  const limpio = nombre.trim();
+  if (limpio && !c.tiposInsumo.some((t) => t.toLowerCase() === limpio.toLowerCase())) {
+    c.tiposInsumo = [...c.tiposInsumo, limpio];
+    writeCache(c);
+    void pushParametro("tipos_insumo", c.tiposInsumo);
+  }
+  return c.tiposInsumo;
 }
 
 export function setCostosHa(costos: Record<string, number>): void {
@@ -186,6 +216,9 @@ export async function loadParametros(): Promise<void> {
   }
   if (Array.isArray(remote["formula"]) && (remote["formula"] as FormulaInsumo[]).length > 0) {
     c.formula = remote["formula"] as FormulaInsumo[];
+  }
+  if (Array.isArray(remote["tipos_insumo"]) && (remote["tipos_insumo"] as string[]).length > 0) {
+    c.tiposInsumo = remote["tipos_insumo"] as string[];
   }
   writeCache(c);
 }

@@ -101,6 +101,63 @@ export function Field({
   );
 }
 
+// Campo de fecha con formato dia/mes/anio fijo (el input nativo muestra el orden
+// del navegador, que puede ser mes/dia). Guarda ISO yyyy-mm-dd.
+export function DateField({
+  label,
+  value,
+  onChange,
+  className = "field",
+}: {
+  label?: string;
+  value: string;
+  onChange: (iso: string) => void;
+  className?: string;
+}) {
+  const isoToText = (iso: string): string => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+  };
+  const [text, setText] = useState(() => isoToText(value));
+  useEffect(() => {
+    setText((t) => {
+      const digits = t.replace(/\D/g, "");
+      return digits.length === 8 || !value ? isoToText(value) : t;
+    });
+  }, [value]);
+
+  const handle = (s: string) => {
+    const digits = s.replace(/\D/g, "").slice(0, 8);
+    let out = digits;
+    if (digits.length > 4) out = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    else if (digits.length > 2) out = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    setText(out);
+    if (digits.length === 8) {
+      const d = Number(digits.slice(0, 2));
+      const mo = Number(digits.slice(2, 4));
+      const y = Number(digits.slice(4));
+      if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12 && y >= 1900) {
+        onChange(`${digits.slice(4)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`);
+      }
+    } else if (!digits.length) {
+      onChange("");
+    }
+  };
+
+  return (
+    <label className="block space-y-1.5">
+      {label && <span className="label">{label}</span>}
+      <input
+        value={text}
+        onChange={(e) => handle(e.target.value)}
+        placeholder="dd/mm/aaaa"
+        inputMode="numeric"
+        className={className}
+      />
+    </label>
+  );
+}
+
 export function Dropdown<T extends string>({
   label,
   value,

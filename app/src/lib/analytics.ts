@@ -282,6 +282,7 @@ const PROXIMA_ACCION: Record<string, string> = {
   inicio_contacto: "Agendar reunión",
   completar_datos: "Completar la ficha",
   agenda_visita: "Coordinar visita",
+  carga_valor_cliente: "Cargar el valor cliente",
   visita_campo: "Enviar asesoría",
   reunion_oficina: "Pasar a presupuesto",
   asesoria: "Armar presupuesto",
