@@ -22,7 +22,8 @@ app/ios/App/build/
 .env
 .env.*
 !.env.example
-server/config.php
+server/config.local.php
+server/vendor/
 
 # Editor / OS
 .DS_Store

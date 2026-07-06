@@ -49,6 +49,10 @@ $pdo = db_connect($config);
 
 $path = trim((string) ($_GET['path'] ?? ''), '/');
 $parts = $path === '' ? [] : explode('/', $path);
+// Cuando la plataforma enruta /api al servicio sin quitar el prefijo, lo sacamos acá.
+if (($parts[0] ?? '') === 'api') {
+    array_shift($parts);
+}
 $method = $_SERVER['REQUEST_METHOD'];
 $name = $parts[0] ?? '';
 

@@ -16,7 +16,11 @@ $schema = (string) file_get_contents(
     __DIR__ . ($driver === 'sqlite' ? '/schema.sqlite.sql' : '/schema.sql'),
 );
 foreach (array_filter(array_map('trim', explode(';', $schema))) as $stmt) {
-    $pdo->exec($stmt);
+    try {
+        $pdo->exec($stmt);
+    } catch (PDOException $e) {
+        // En re-deploys las tablas ya existen: no es un error a frenar.
+    }
 }
 
 $exists = $pdo->prepare('SELECT id FROM users WHERE usuario = ?');

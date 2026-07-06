@@ -1,0 +1,73 @@
+name: chaja
+region: nyc
+
+databases:
+  - name: db
+    engine: MYSQL
+    version: "8"
+    production: false
+
+static_sites:
+  - name: web
+    github:
+      repo: emgi1319/Chaja
+      branch: main
+      deploy_on_push: true
+    source_dir: app
+    build_command: npm ci && npm run build
+    output_dir: dist
+    environment_slug: node-js
+    catchall_document: index.html
+    envs:
+      - key: VITE_API_BASE
+        scope: BUILD_TIME
+        value: "/api"
+
+services:
+  - name: api
+    github:
+      repo: emgi1319/Chaja
+      branch: main
+      deploy_on_push: true
+    source_dir: server
+    environment_slug: php
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    run_command: heroku-php-apache2 .
+    routes:
+      - path: /api
+    envs:
+      - key: DB_HOST
+        value: ${db.HOSTNAME}
+      - key: DB_PORT
+        value: ${db.PORT}
+      - key: DB_NAME
+        value: ${db.DATABASE}
+      - key: DB_USER
+        value: ${db.USERNAME}
+      - key: DB_PASS
+        value: ${db.PASSWORD}
+      - key: CORS_ORIGIN
+        value: "*"
+
+jobs:
+  - name: migrate-seed
+    github:
+      repo: emgi1319/Chaja
+      branch: main
+    source_dir: server
+    environment_slug: php
+    kind: PRE_DEPLOY
+    run_command: php migrate.php && php seed.php
+    envs:
+      - key: DB_HOST
+        value: ${db.HOSTNAME}
+      - key: DB_PORT
+        value: ${db.PORT}
+      - key: DB_NAME
+        value: ${db.DATABASE}
+      - key: DB_USER
+        value: ${db.USERNAME}
+      - key: DB_PASS
+        value: ${db.PASSWORD}

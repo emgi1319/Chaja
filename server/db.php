@@ -22,6 +22,7 @@ function db_connect(array $config): PDO
         return new PDO('sqlite:' . $path, null, null, $opts);
     }
 
-    $dsn = "mysql:host={$config['db_host']};dbname={$config['db_name']};charset=utf8mb4";
+    $port = isset($config['db_port']) && $config['db_port'] !== '' ? ";port={$config['db_port']}" : '';
+    $dsn = "mysql:host={$config['db_host']}{$port};dbname={$config['db_name']};charset=utf8mb4";
     return new PDO($dsn, $config['db_user'], $config['db_pass'], $opts);
 }
