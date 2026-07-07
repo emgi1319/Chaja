@@ -121,8 +121,8 @@ export function productoresRows(): ProductorRow[] {
         productor: p,
         potencial,
         facturado,
-        oportunidad: potencial - facturado,
-        captura: potencial > 0 ? facturado / potencial : 0,
+        oportunidad: Math.max(0, potencial - facturado),
+        captura: potencial > 0 ? Math.min(1, facturado / potencial) : 0,
         hectareas,
       };
     })

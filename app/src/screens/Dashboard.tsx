@@ -60,6 +60,7 @@ import { DateField, Dropdown, Field, PrimaryButton } from "../components/ui";
 import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import { EditarDatosCliente } from "../components/editar-datos-cliente";
+import { RegistrarVenta } from "../components/registrar-venta";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
@@ -1010,6 +1011,7 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
   const [actOpen, setActOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [bcraOpen, setBcraOpen] = useState(false);
+  const [ventaOpen, setVentaOpen] = useState(false);
   const [, bump] = useState(0);
 
   if (!productor || !row) return null;
@@ -1070,12 +1072,18 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setHistOpen(true)}
             className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-ink transition-colors hover:bg-surface"
           >
             <Clock size={16} /> Historial
+          </button>
+          <button
+            onClick={() => setVentaOpen(true)}
+            className="flex items-center gap-1.5 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-2.5 text-[14px] font-semibold text-accent-dark transition-colors hover:bg-accent/15"
+          >
+            <DollarSign size={16} /> Registrar venta
           </button>
           <button
             onClick={() => setActOpen(true)}
@@ -1308,6 +1316,16 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
             ))}
           </ol>
         )}
+      </Drawer>
+
+      <Drawer open={ventaOpen} onClose={() => setVentaOpen(false)} title="Registrar venta">
+        <RegistrarVenta
+          id={id}
+          onSaved={() => {
+            setVentaOpen(false);
+            bump((n) => n + 1);
+          }}
+        />
       </Drawer>
 
       <Drawer open={actOpen} onClose={() => setActOpen(false)} title="Cargar actividad">

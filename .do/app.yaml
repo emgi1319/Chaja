@@ -9,10 +9,9 @@ databases:
 
 static_sites:
   - name: web
-    github:
-      repo: emgi1319/Chaja
+    git:
+      repo_clone_url: https://github.com/emgi1319/Chaja.git
       branch: main
-      deploy_on_push: true
     source_dir: app
     build_command: npm ci && npm run build
     output_dir: dist
@@ -25,10 +24,9 @@ static_sites:
 
 services:
   - name: api
-    github:
-      repo: emgi1319/Chaja
+    git:
+      repo_clone_url: https://github.com/emgi1319/Chaja.git
       branch: main
-      deploy_on_push: true
     source_dir: server
     environment_slug: php
     http_port: 8080
@@ -53,8 +51,8 @@ services:
 
 jobs:
   - name: migrate-seed
-    github:
-      repo: emgi1319/Chaja
+    git:
+      repo_clone_url: https://github.com/emgi1319/Chaja.git
       branch: main
     source_dir: server
     environment_slug: php

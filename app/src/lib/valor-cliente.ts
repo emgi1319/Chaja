@@ -34,8 +34,20 @@ export function valorClienteTotal(p: Productor): number {
   return cultivosDe(p).reduce((acc, c) => acc + valorCultivo(c), 0);
 }
 
+// Lo vendido al cliente: el facturado base de la canasta (referencia del ciclo
+// anterior) más las ventas registradas mes a mes (facturación comercial cargada
+// desde la ficha). Así cada venta baja la oportunidad y sube el facturado.
+export function ventasRegistradas(p: Productor): number {
+  return (p.facturacionMensual ?? []).reduce((acc, m) => acc + (m.monto || 0), 0);
+}
+
 export function facturadoCliente(p: Productor): number {
-  return cultivosDe(p).reduce((acc, c) => acc + facturadoCultivo(c), 0);
+  const base = cultivosDe(p).reduce((acc, c) => acc + facturadoCultivo(c), 0);
+  return base + ventasRegistradas(p);
+}
+
+export function oportunidadCliente(p: Productor): number {
+  return Math.max(0, valorClienteTotal(p) - facturadoCliente(p));
 }
 
 export function diferenciaTotal(p: Productor): number {
