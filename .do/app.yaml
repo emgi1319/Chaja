@@ -4,8 +4,8 @@ region: nyc
 databases:
   - name: db
     engine: MYSQL
-    version: "8"
-    production: false
+    cluster_name: chaja-db
+    production: true
 
 static_sites:
   - name: web

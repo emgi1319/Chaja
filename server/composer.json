@@ -1,8 +1,4 @@
 {
   "name": "chaja/api",
-  "description": "API PHP de Chaja",
-  "require": {
-    "php": ">=8.1",
-    "ext-pdo": "*"
-  }
+  "description": "API PHP de Chaja"
 }
