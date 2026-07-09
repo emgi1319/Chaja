@@ -174,6 +174,7 @@ const RAIL_SUP: Section[] = [
   "clientes",
   "seguimiento",
   "operaciones",
+  "referidos",
   "reportes",
   "supervisor",
   "parametros",
@@ -668,13 +669,14 @@ function Referidos() {
           <Plus size={17} /> Nuevo referido
         </button>
       </div>
-      <TableShell head={["Referido", "Referidor", "Proceso", "Ha"]}>
+      <TableShell head={["Referido", "Vendedor", "Referidor", "Proceso", "Ha"]}>
         {rs.map((r) => (
           <tr key={r.id} className="border-t border-line transition-colors hover:bg-surface">
             <td className="px-4 py-3">
               <p className="font-medium text-ink">{r.nombre}</p>
               {r.observaciones && <p className="text-[11px] text-ink-muted">{r.observaciones}</p>}
             </td>
+            <td className="px-4 py-3 text-right text-ink-soft">{r.creadoPor || "—"}</td>
             <td className="px-4 py-3 text-right text-ink-soft">{r.referidor || "—"}</td>
             <td className="px-4 py-3 text-right">
               <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[12px] font-medium text-primary-dark">
