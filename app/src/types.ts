@@ -15,11 +15,13 @@ export interface Entity {
 
 export type AnuncioAudiencia = "todos" | "rol" | "usuario";
 export type AnuncioTema = "azul" | "verde" | "ambar" | "oscuro";
+export type AnuncioFormato = "imagen" | "imagen_texto" | "texto";
 
 // Campaña de comunicación que el super admin publica y aparece a los usuarios
 // destinatarios sobre el contenido de cada pantalla.
 export interface Anuncio {
   id: string;
+  formato: AnuncioFormato;
   titulo: string;
   texto?: string;
   imagen?: string;
