@@ -179,6 +179,60 @@ if ($name === 'usuarios') {
     fail('metodo no soportado', 405);
 }
 
+// Campañas / comunicados: el super admin publica banners; cada usuario recibe los
+// que le corresponden (a todos, a su rol, o a su cuenta). La lectura la hace cualquiera;
+// crear, editar y eliminar es exclusivo del super admin.
+if ($name === 'anuncios') {
+    if ($method === 'GET') {
+        $rows = $pdo->query('SELECT data FROM anuncios ORDER BY created_at DESC')->fetchAll();
+        $all = array_map(fn ($r) => json_decode($r['data'], true), $rows);
+        if ($user['rol'] === 'superadmin') {
+            out($all);
+        }
+        $vis = array_values(array_filter($all, function ($a) use ($user) {
+            if (empty($a['activo'])) {
+                return false;
+            }
+            $aud = $a['audiencia'] ?? 'todos';
+            if ($aud === 'todos') {
+                return true;
+            }
+            if ($aud === 'rol') {
+                return ($a['rol'] ?? '') === $user['rol'];
+            }
+            if ($aud === 'usuario') {
+                return ($a['usuarioId'] ?? '') === $user['id'];
+            }
+            return false;
+        }));
+        out($vis);
+    }
+    if ($user['rol'] !== 'superadmin') {
+        fail('solo super admin', 403);
+    }
+    if ($method === 'POST') {
+        $b = body();
+        $id = (string) ($b['id'] ?? '');
+        if ($id === '') {
+            fail('falta id');
+        }
+        $created = (int) ($b['createdAt'] ?? round(microtime(true) * 1000));
+        $activo = empty($b['activo']) ? 0 : 1;
+        $pdo->prepare('REPLACE INTO anuncios (id, activo, created_at, data) VALUES (?, ?, ?, ?)')
+            ->execute([$id, $activo, $created, json_encode($b, JSON_UNESCAPED_UNICODE)]);
+        out(['ok' => true]);
+    }
+    if ($method === 'DELETE') {
+        $target = $parts[1] ?? '';
+        if ($target === '') {
+            fail('falta id');
+        }
+        $pdo->prepare('DELETE FROM anuncios WHERE id = ?')->execute([$target]);
+        out(['ok' => true]);
+    }
+    fail('metodo no soportado', 405);
+}
+
 // Colecciones: tabla, si se filtra por dueño, y columnas indexadas que se extraen del objeto
 $collections = [
     'productores' => ['table' => 'productores', 'owned' => true, 'cols' => ['razon_social' => 'razonSocial', 'localidad' => 'localidad']],

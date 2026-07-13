@@ -43,6 +43,7 @@ import {
   Menu,
   Lightbulb,
   Shield,
+  Megaphone,
 } from "lucide-react";
 import { useApp } from "../store";
 import {
@@ -63,6 +64,8 @@ import { ClienteForm } from "../components/cliente-form";
 import { EditarDatosCliente } from "../components/editar-datos-cliente";
 import { RegistrarVenta } from "../components/registrar-venta";
 import { GestionUsuarios } from "../components/gestion-usuarios";
+import { GestionCampanias } from "../components/gestion-campanias";
+import { AnunciosBanner } from "../components/anuncios-banner";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
@@ -141,7 +144,8 @@ type Section =
   | "supervisor"
   | "auditoria"
   | "facturacion"
-  | "usuarios";
+  | "usuarios"
+  | "campanias";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
@@ -159,6 +163,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "auditoria", label: "Auditoría", icon: History },
   { key: "facturacion", label: "Facturación", icon: DollarSign },
   { key: "usuarios", label: "Cuentas", icon: Shield },
+  { key: "campanias", label: "Campañas", icon: Megaphone },
 ];
 
 // Secciones visibles por perfil (el gerente ve todo). El supervisor ve clientes
@@ -203,6 +208,7 @@ const SECTION_TITLE: Record<Section, string> = {
   auditoria: "Auditoría de cambios",
   facturacion: "Facturación histórica y scoring",
   usuarios: "Gestión de cuentas",
+  campanias: "Campañas y comunicados",
 };
 
 // Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
@@ -222,6 +228,7 @@ const SECTION_DESC: Record<Section, string> = {
   auditoria: "Historial de cambios sobre el Valor Cliente.",
   facturacion: "Carga mensual de facturación y scoring de cada cliente.",
   usuarios: "Alta, baja y roles de las cuentas del sistema.",
+  campanias: "Publicá banners y comunicados para los usuarios del sistema.",
 };
 
 // Banner destacado de cada sección (copia del modo "Descripciones" del demo).
@@ -285,6 +292,10 @@ const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
   usuarios: {
     h: "Vos controlás quién entra y con qué permisos",
     p: "Creá y eliminá cuentas, y asigná el rol de cada una. El super admin gestiona el acceso de toda la empresa.",
+  },
+  campanias: {
+    h: "Comunicá a tu red en el momento justo",
+    p: "Publicá banners con imágenes y mensajes dirigidos a todos, a un tipo de usuario o a una cuenta puntual. Aparecen sobre el contenido de cada pantalla.",
   },
 };
 
@@ -2540,7 +2551,7 @@ export function Dashboard() {
         ? RAIL_SUP
         : user.rol === "superadmin"
           ? NAV.map((n) => n.key)
-          : NAV.filter((n) => n.key !== "usuarios").map((n) => n.key);
+          : NAV.filter((n) => n.key !== "usuarios" && n.key !== "campanias").map((n) => n.key);
   const visibleNav = allowed
     .map((k) => NAV.find((n) => n.key === k))
     .filter(Boolean) as { key: Section; label: string; icon: typeof Users }[];
@@ -2700,6 +2711,7 @@ export function Dashboard() {
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
           className="fade-in flex-1 overflow-y-auto p-4 md:p-6"
         >
+          <AnunciosBanner />
           <SectionBanner section={section} />
           {section === "inicio" && <Inicio />}
           {section === "clientes" && <Clientes />}
@@ -2727,6 +2739,7 @@ export function Dashboard() {
           {section === "auditoria" && <Auditoria />}
           {section === "facturacion" && <Facturacion />}
           {section === "usuarios" && <GestionUsuarios />}
+          {section === "campanias" && <GestionCampanias />}
         </main>
       </div>
     </div>

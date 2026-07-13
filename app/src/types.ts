@@ -13,6 +13,26 @@ export interface Entity {
   synced?: boolean;
 }
 
+export type AnuncioAudiencia = "todos" | "rol" | "usuario";
+export type AnuncioTema = "azul" | "verde" | "ambar" | "oscuro";
+
+// Campaña de comunicación que el super admin publica y aparece a los usuarios
+// destinatarios sobre el contenido de cada pantalla.
+export interface Anuncio {
+  id: string;
+  titulo: string;
+  texto?: string;
+  imagen?: string;
+  enlace?: string;
+  audiencia: AnuncioAudiencia;
+  rol?: Rol;
+  usuarioId?: string;
+  usuarioNombre?: string;
+  tema: AnuncioTema;
+  activo: boolean;
+  createdAt: number;
+}
+
 export interface Producto {
   id: string;
   codigo?: string;

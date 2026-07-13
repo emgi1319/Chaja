@@ -88,3 +88,12 @@ CREATE TABLE IF NOT EXISTS auditoria (
 );
 
 CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha);
+
+CREATE TABLE IF NOT EXISTS anuncios (
+  id TEXT PRIMARY KEY,
+  activo INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  data TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_anuncios_created ON anuncios(created_at);

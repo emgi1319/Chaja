@@ -1,4 +1,4 @@
-import type { Entity, Operacion, Producto, Productor, NotaCampo, Referido, User } from "../types";
+import type { Anuncio, Entity, Operacion, Producto, Productor, NotaCampo, Referido, User } from "../types";
 import { LocalCollection, newId } from "./db";
 
 // API_BASE vacío = modo local sin backend (la app funciona 100% offline contra
@@ -12,6 +12,7 @@ const CATALOG_KEY = "chaja.catalogo";
 const USER_KEY = "chaja.user";
 const TOKEN_KEY = "chaja.token";
 const PENDING_OPS_KEY = "chaja.pending_ops";
+const ANUNCIOS_KEY = "chaja.anuncios";
 
 export function readToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -302,6 +303,45 @@ export async function crearUsuario(data: {
 export async function eliminarUsuario(id: string): Promise<void> {
   if (!API_BASE) return;
   await request(`/usuarios/${id}`, { method: "DELETE" });
+}
+
+// Campañas / comunicados del super admin. En modo local se guardan en el
+// dispositivo; con backend se publican al servidor y se cachean para verlas sin señal.
+export async function listarAnuncios(): Promise<Anuncio[]> {
+  if (!API_BASE) return cacheGet<Anuncio[]>(ANUNCIOS_KEY) ?? [];
+  try {
+    const items = await request<Anuncio[]>("/anuncios");
+    localStorage.setItem(ANUNCIOS_KEY, JSON.stringify(items));
+    return items;
+  } catch {
+    return cacheGet<Anuncio[]>(ANUNCIOS_KEY) ?? [];
+  }
+}
+
+export async function guardarAnuncio(a: Anuncio): Promise<void> {
+  if (!API_BASE) {
+    const rest = (cacheGet<Anuncio[]>(ANUNCIOS_KEY) ?? []).filter((x) => x.id !== a.id);
+    localStorage.setItem(ANUNCIOS_KEY, JSON.stringify([a, ...rest]));
+    return;
+  }
+  await request("/anuncios", { method: "POST", body: JSON.stringify(a) });
+}
+
+export async function eliminarAnuncio(id: string): Promise<void> {
+  if (!API_BASE) {
+    const rest = (cacheGet<Anuncio[]>(ANUNCIOS_KEY) ?? []).filter((x) => x.id !== id);
+    localStorage.setItem(ANUNCIOS_KEY, JSON.stringify(rest));
+    return;
+  }
+  await request(`/anuncios/${id}`, { method: "DELETE" });
+}
+
+export function anuncioVisible(a: Anuncio, user: User): boolean {
+  if (!a.activo) return false;
+  if (a.audiencia === "todos") return true;
+  if (a.audiencia === "rol") return a.rol === user.rol;
+  if (a.audiencia === "usuario") return a.usuarioId === user.id;
+  return false;
 }
 
 export function readUser(): User | null {
