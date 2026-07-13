@@ -450,9 +450,9 @@ export function GestionCampanias() {
 function Preview({ form }: { form: typeof VACIO }) {
   if (form.formato === "imagen") {
     return form.imagen ? (
-      <img src={form.imagen} alt="" className="w-full rounded-2xl object-cover" />
+      <img src={form.imagen} alt="" className="h-36 w-full rounded-2xl object-cover sm:h-44" />
     ) : (
-      <div className="flex h-40 w-full items-center justify-center rounded-2xl border border-dashed border-line bg-surface text-[13px] text-ink-muted">
+      <div className="flex h-36 w-full items-center justify-center rounded-2xl border border-dashed border-line bg-surface text-[13px] text-ink-muted sm:h-44">
         Subí una imagen
       </div>
     );

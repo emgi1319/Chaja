@@ -32,9 +32,15 @@ const TEMA: Record<AnuncioTema, { wrap: string; title: string; text: string; lin
 };
 
 function Contenido({ a }: { a: Anuncio }) {
-  // Solo imagen: el banner es la imagen, sin caja de color.
+  // Solo imagen: el banner es la imagen a alto fijo, recortada al centro.
   if (a.formato === "imagen") {
-    return <img src={a.imagen} alt={a.titulo || ""} className="w-full rounded-2xl object-cover" />;
+    return (
+      <img
+        src={a.imagen}
+        alt={a.titulo || ""}
+        className="h-36 w-full rounded-2xl object-cover sm:h-44"
+      />
+    );
   }
 
   const t = TEMA[a.tema] ?? TEMA.azul;
