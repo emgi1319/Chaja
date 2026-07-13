@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { listarAnuncios, anuncioVisible } from "../lib/api";
+import { listarAnuncios, anunciosCacheados, anuncioVisible } from "../lib/api";
 import { useApp } from "../store";
 import type { Anuncio, AnuncioTema } from "../types";
 
@@ -66,11 +66,18 @@ function Contenido({ a }: { a: Anuncio }) {
   );
 }
 
+// Revalidación única por carga de app: evita un fetch por cada cambio de sección.
+let revalidado = false;
+
 export function AnunciosBanner() {
   const user = useApp((s) => s.user);
-  const [items, setItems] = useState<Anuncio[]>([]);
+  const [items, setItems] = useState<Anuncio[]>(anunciosCacheados);
 
   useEffect(() => {
+    // Ya se dibujó desde el cache; revalidamos contra el servidor una sola vez
+    // por sesión para no pegarle en cada cambio de sección (el main se remonta).
+    if (revalidado) return;
+    revalidado = true;
     let alive = true;
     void listarAnuncios().then((all) => {
       if (alive) setItems(all);

@@ -307,6 +307,11 @@ export async function eliminarUsuario(id: string): Promise<void> {
 
 // Campañas / comunicados del super admin. En modo local se guardan en el
 // dispositivo; con backend se publican al servidor y se cachean para verlas sin señal.
+// Lectura síncrona del cache: sirve el banner en el primer render, sin esperar la red.
+export function anunciosCacheados(): Anuncio[] {
+  return cacheGet<Anuncio[]>(ANUNCIOS_KEY) ?? [];
+}
+
 export async function listarAnuncios(): Promise<Anuncio[]> {
   if (!API_BASE) return cacheGet<Anuncio[]>(ANUNCIOS_KEY) ?? [];
   try {
