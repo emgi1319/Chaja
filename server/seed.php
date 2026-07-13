@@ -21,6 +21,7 @@ function upsertUser(PDO $pdo, string $id, string $nombre, string $usuario, strin
 upsertUser($pdo, 'usr-diego', 'Diego Romero', 'diego', 'diego', 'vendedor');
 upsertUser($pdo, 'usr-sandra', 'Sandra Méndez', 'sandra', 'sandra', 'supervisor');
 upsertUser($pdo, 'usr-admin', 'Pablo Herrera', 'admin', 'admin', 'gerente');
+upsertUser($pdo, 'usr-superadmin', 'Super Admin', 'superadmin', 'superadmin', 'superadmin');
 
 $owner = 'usr-diego';
 

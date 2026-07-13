@@ -1,6 +1,12 @@
 name: chaja
 region: nyc
 
+domains:
+  - domain: chaja.net.ar
+    type: PRIMARY
+  - domain: www.chaja.net.ar
+    type: ALIAS
+
 databases:
   - name: db
     engine: MYSQL

@@ -42,6 +42,7 @@ import {
   MapPin,
   Menu,
   Lightbulb,
+  Shield,
 } from "lucide-react";
 import { useApp } from "../store";
 import {
@@ -61,6 +62,7 @@ import { Drawer } from "../components/drawer";
 import { ClienteForm } from "../components/cliente-form";
 import { EditarDatosCliente } from "../components/editar-datos-cliente";
 import { RegistrarVenta } from "../components/registrar-venta";
+import { GestionUsuarios } from "../components/gestion-usuarios";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
 import { exportarExcel } from "../lib/export";
@@ -138,7 +140,8 @@ type Section =
   | "reportes"
   | "supervisor"
   | "auditoria"
-  | "facturacion";
+  | "facturacion"
+  | "usuarios";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
@@ -155,6 +158,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "supervisor", label: "Panel supervisor", icon: Activity },
   { key: "auditoria", label: "Auditoría", icon: History },
   { key: "facturacion", label: "Facturación", icon: DollarSign },
+  { key: "usuarios", label: "Cuentas", icon: Shield },
 ];
 
 // Secciones visibles por perfil (el gerente ve todo). El supervisor ve clientes
@@ -198,6 +202,7 @@ const SECTION_TITLE: Record<Section, string> = {
   supervisor: "Panel del supervisor",
   auditoria: "Auditoría de cambios",
   facturacion: "Facturación histórica y scoring",
+  usuarios: "Gestión de cuentas",
 };
 
 // Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
@@ -216,6 +221,7 @@ const SECTION_DESC: Record<Section, string> = {
   supervisor: "Cronograma de campañas y semáforo de avance por vendedor.",
   auditoria: "Historial de cambios sobre el Valor Cliente.",
   facturacion: "Carga mensual de facturación y scoring de cada cliente.",
+  usuarios: "Alta, baja y roles de las cuentas del sistema.",
 };
 
 // Banner destacado de cada sección (copia del modo "Descripciones" del demo).
@@ -275,6 +281,10 @@ const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
   facturacion: {
     h: "La facturación que respalda el scoring",
     p: "Cargá la facturación mes a mes de cada cliente y obtené su scoring para priorizar dónde poner el foco.",
+  },
+  usuarios: {
+    h: "Vos controlás quién entra y con qué permisos",
+    p: "Creá y eliminá cuentas, y asigná el rol de cada una. El super admin gestiona el acceso de toda la empresa.",
   },
 };
 
@@ -2524,7 +2534,13 @@ export function Dashboard() {
     user.rol === "supervisor" ? "supervisor" : "inicio",
   );
   const allowed: Section[] =
-    user.rol === "vendedor" ? RAIL_VEND : user.rol === "supervisor" ? RAIL_SUP : NAV.map((n) => n.key);
+    user.rol === "vendedor"
+      ? RAIL_VEND
+      : user.rol === "supervisor"
+        ? RAIL_SUP
+        : user.rol === "superadmin"
+          ? NAV.map((n) => n.key)
+          : NAV.filter((n) => n.key !== "usuarios").map((n) => n.key);
   const visibleNav = allowed
     .map((k) => NAV.find((n) => n.key === k))
     .filter(Boolean) as { key: Section; label: string; icon: typeof Users }[];
@@ -2710,6 +2726,7 @@ export function Dashboard() {
           )}
           {section === "auditoria" && <Auditoria />}
           {section === "facturacion" && <Facturacion />}
+          {section === "usuarios" && <GestionUsuarios />}
         </main>
       </div>
     </div>

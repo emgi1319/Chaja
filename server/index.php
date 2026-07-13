@@ -80,7 +80,7 @@ $user = $stmt->fetch();
 if (!$user) {
     fail('no autorizado', 401);
 }
-$canSeeAll = in_array($user['rol'], ['supervisor', 'gerente'], true);
+$canSeeAll = in_array($user['rol'], ['supervisor', 'gerente', 'superadmin'], true);
 
 if ($name === 'me' && $method === 'GET') {
     out(['id' => $user['id'], 'nombre' => $user['nombre'], 'usuario' => $user['usuario'], 'rol' => $user['rol']]);
@@ -131,6 +131,52 @@ if ($name === 'auditoria') {
             ->execute([$id, $user['id'], $fecha, json_encode($data, JSON_UNESCAPED_UNICODE)]);
         out(['ok' => true]);
     }
+}
+
+// Gestión de cuentas: solo el super admin lista, crea y elimina usuarios.
+if ($name === 'usuarios') {
+    if ($user['rol'] !== 'superadmin') {
+        fail('solo super admin', 403);
+    }
+    if ($method === 'GET') {
+        $rows = $pdo->query('SELECT id, nombre, usuario, rol FROM users ORDER BY nombre')->fetchAll();
+        out($rows);
+    }
+    if ($method === 'POST') {
+        $b = body();
+        $usuario = trim((string) ($b['usuario'] ?? ''));
+        $nombre = trim((string) ($b['nombre'] ?? ''));
+        $pass = (string) ($b['password'] ?? '');
+        $rol = (string) ($b['rol'] ?? 'vendedor');
+        if ($usuario === '' || $nombre === '' || $pass === '') {
+            fail('faltan datos');
+        }
+        if (!in_array($rol, ['vendedor', 'supervisor', 'gerente', 'superadmin'], true)) {
+            fail('rol invalido');
+        }
+        $exists = $pdo->prepare('SELECT id FROM users WHERE usuario = ?');
+        $exists->execute([$usuario]);
+        if ($exists->fetch()) {
+            fail('el usuario ya existe', 409);
+        }
+        $id = 'usr-' . bin2hex(random_bytes(6));
+        $pdo->prepare('INSERT INTO users (id, nombre, usuario, password_hash, rol) VALUES (?, ?, ?, ?, ?)')
+            ->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol]);
+        out(['id' => $id, 'nombre' => $nombre, 'usuario' => $usuario, 'rol' => $rol], 201);
+    }
+    if ($method === 'DELETE') {
+        $target = $parts[1] ?? '';
+        if ($target === '') {
+            fail('falta id');
+        }
+        if ($target === $user['id']) {
+            fail('no podes eliminar tu propia cuenta', 400);
+        }
+        $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$target]);
+        $pdo->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$target]);
+        out(['ok' => true]);
+    }
+    fail('metodo no soportado', 405);
 }
 
 // Colecciones: tabla, si se filtra por dueño, y columnas indexadas que se extraen del objeto

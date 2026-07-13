@@ -271,6 +271,39 @@ export async function listarAuditoria(): Promise<AuditoriaEvento[]> {
   }
 }
 
+export interface CuentaUsuario {
+  id: string;
+  nombre: string;
+  usuario: string;
+  rol: string;
+}
+
+export async function listarUsuarios(): Promise<CuentaUsuario[]> {
+  if (!API_BASE) return [];
+  try {
+    return await request<CuentaUsuario[]>("/usuarios");
+  } catch {
+    return [];
+  }
+}
+
+export async function crearUsuario(data: {
+  nombre: string;
+  usuario: string;
+  password: string;
+  rol: string;
+}): Promise<CuentaUsuario> {
+  return await request<CuentaUsuario>("/usuarios", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function eliminarUsuario(id: string): Promise<void> {
+  if (!API_BASE) return;
+  await request(`/usuarios/${id}`, { method: "DELETE" });
+}
+
 export function readUser(): User | null {
   return cacheGet<User>(USER_KEY);
 }
@@ -298,10 +331,12 @@ export async function login(usuario: string, password: string): Promise<User> {
   }
   if (password !== "demo") throw new Error("credenciales");
   const lower = usuario.toLowerCase();
-  const rol: User["rol"] = lower.includes("gerente")
-    ? "gerente"
-    : lower.includes("super")
-      ? "supervisor"
-      : "vendedor";
+  const rol: User["rol"] = lower.includes("superadmin") || lower.includes("super admin")
+    ? "superadmin"
+    : lower.includes("gerente")
+      ? "gerente"
+      : lower.includes("super")
+        ? "supervisor"
+        : "vendedor";
   return { id: newId(), nombre: usuario, usuario, rol };
 }
