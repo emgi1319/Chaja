@@ -23,6 +23,15 @@ foreach (array_filter(array_map('trim', explode(';', $schema))) as $stmt) {
     }
 }
 
+// El rol paso de ENUM fijo a texto libre; actualizar la tabla ya creada (MySQL).
+if (($driver ?? 'mysql') !== 'sqlite') {
+    try {
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN rol VARCHAR(20) NOT NULL DEFAULT 'vendedor'");
+    } catch (PDOException $e) {
+        // ya estaba migrado
+    }
+}
+
 $exists = $pdo->prepare('SELECT id FROM users WHERE usuario = ?');
 $exists->execute(['admin']);
 if (!$exists->fetch()) {

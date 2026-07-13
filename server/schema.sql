@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   nombre VARCHAR(120) NOT NULL,
   usuario VARCHAR(80) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  rol ENUM('vendedor','supervisor','gerente') NOT NULL DEFAULT 'vendedor',
+  rol VARCHAR(20) NOT NULL DEFAULT 'vendedor',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
