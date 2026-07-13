@@ -55,7 +55,10 @@ import {
   saveProducto,
   registrarAuditoria,
   listarAuditoria,
+  listarUsuarios,
+  listarAnuncios,
   type AuditoriaEvento,
+  type CuentaUsuario,
 } from "../lib/api";
 import { newId } from "../lib/db";
 import { DateField, Dropdown, Field, PrimaryButton } from "../components/ui";
@@ -91,6 +94,7 @@ import {
   type EstadoProceso,
   type InsumoLinea,
   type Referido,
+  type Anuncio,
 } from "../types";
 import {
   productoresRows,
@@ -145,9 +149,11 @@ type Section =
   | "auditoria"
   | "facturacion"
   | "usuarios"
-  | "campanias";
+  | "campanias"
+  | "plataforma";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
+  { key: "plataforma", label: "Panel", icon: Gauge },
   { key: "inicio", label: "Inicio", icon: LayoutDashboard },
   { key: "clientes", label: "Clientes", icon: Users },
   { key: "seguimiento", label: "Seguimiento", icon: Filter },
@@ -191,8 +197,12 @@ const RAIL_SUP: Section[] = [
   "equipo",
   "productos",
 ];
+// El super admin es el dueño de la plataforma: solo ve el estado del sistema,
+// las cuentas y las campañas. Nada operativo (clientes, valor cliente, parámetros, etc.).
+const RAIL_ADMIN: Section[] = ["plataforma", "usuarios", "campanias"];
 
 const SECTION_TITLE: Record<Section, string> = {
+  plataforma: "Panel de la plataforma",
   inicio: "Tablero de control",
   clientes: "Clientes y su Valor Cliente",
   seguimiento: "Seguimiento por cliente",
@@ -213,6 +223,7 @@ const SECTION_TITLE: Record<Section, string> = {
 
 // Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
 const SECTION_DESC: Record<Section, string> = {
+  plataforma: "Estado general del sistema: cuentas, campañas y uso.",
   inicio: "Resumen de la campaña: avances, oportunidades y alertas.",
   clientes: "Cartera de productores: dónde estás y dónde podés llegar.",
   seguimiento: "Aquí la próxima acción a realizar con cada cliente.",
@@ -233,6 +244,10 @@ const SECTION_DESC: Record<Section, string> = {
 
 // Banner destacado de cada sección (copia del modo "Descripciones" del demo).
 const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
+  plataforma: {
+    h: "Tu plataforma, de una mirada",
+    p: "Cuántas cuentas hay, qué campañas están activas y cuánto se está usando el sistema. Todo lo que el dueño necesita para controlar la herramienta.",
+  },
   inicio: {
     h: "Tu negocio comercial, de un vistazo",
     p: "Las métricas clave, las acciones urgentes y la actividad reciente en una sola pantalla. Empezá el día sabiendo dónde están las oportunidades.",
@@ -2538,11 +2553,94 @@ function PanelSupervisor({ onParametros }: { onParametros: () => void }) {
   );
 }
 
+const ROL_PLATAFORMA: { rol: string; label: string; icon: typeof Users }[] = [
+  { rol: "vendedor", label: "Vendedores", icon: Users },
+  { rol: "supervisor", label: "Supervisores", icon: Activity },
+  { rol: "gerente", label: "Gerentes", icon: UserCheck },
+  { rol: "superadmin", label: "Super admins", icon: Shield },
+];
+
+function PanelPlataforma({ onIr }: { onIr: (s: Section) => void }) {
+  const [usuarios, setUsuarios] = useState<CuentaUsuario[]>([]);
+  const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
+  useEffect(() => {
+    void listarUsuarios().then(setUsuarios);
+    void listarAnuncios().then(setAnuncios);
+  }, []);
+  const activas = anuncios.filter((a) => a.activo).length;
+  const usoClientes = productores.list().length;
+  const usoActividades = notasCampo.list().length;
+  const porRol = (r: string) => usuarios.filter((u) => u.rol === r).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi icon={Users} label="Cuentas totales" value={String(usuarios.length)} onClick={() => onIr("usuarios")} />
+        <Kpi
+          icon={Megaphone}
+          label="Campañas activas"
+          value={`${activas} / ${anuncios.length}`}
+          tone="accent"
+          onClick={() => onIr("campanias")}
+        />
+        <Kpi icon={Boxes} label="Clientes en el sistema" value={String(usoClientes)} />
+        <Kpi icon={ClipboardCheck} label="Actividades registradas" value={String(usoActividades)} />
+      </div>
+
+      <section className="card">
+        <h2 className="font-display text-[15px] font-semibold text-ink">Cuentas por tipo</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {ROL_PLATAFORMA.map((r) => (
+            <div key={r.rol} className="flex items-center gap-3 rounded-2xl border border-line p-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <r.icon size={19} />
+              </div>
+              <div>
+                <p className="font-display text-[20px] font-bold leading-tight text-ink">{porRol(r.rol)}</p>
+                <p className="text-[12px] text-ink-muted">{r.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <button
+          onClick={() => onIr("usuarios")}
+          className="card card-hover flex items-center gap-3 text-left"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Shield size={20} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-[14px] font-semibold text-ink">Gestionar cuentas</p>
+            <p className="text-[12px] text-ink-soft">Alta, baja y roles de los usuarios del sistema.</p>
+          </div>
+          <ArrowRight size={18} className="ml-auto shrink-0 text-ink-muted" />
+        </button>
+        <button
+          onClick={() => onIr("campanias")}
+          className="card card-hover flex items-center gap-3 text-left"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent-dark">
+            <Megaphone size={20} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-[14px] font-semibold text-ink">Publicar campaña</p>
+            <p className="text-[12px] text-ink-soft">Banners y comunicados para los usuarios.</p>
+          </div>
+          <ArrowRight size={18} className="ml-auto shrink-0 text-ink-muted" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const user = useApp((s) => s.user)!;
   const logout = useApp((s) => s.logout);
   const [section, setSection] = useState<Section>(
-    user.rol === "supervisor" ? "supervisor" : "inicio",
+    user.rol === "supervisor" ? "supervisor" : user.rol === "superadmin" ? "plataforma" : "inicio",
   );
   const allowed: Section[] =
     user.rol === "vendedor"
@@ -2550,8 +2648,10 @@ export function Dashboard() {
       : user.rol === "supervisor"
         ? RAIL_SUP
         : user.rol === "superadmin"
-          ? NAV.map((n) => n.key)
-          : NAV.filter((n) => n.key !== "usuarios" && n.key !== "campanias").map((n) => n.key);
+          ? RAIL_ADMIN
+          : NAV.filter(
+              (n) => !["usuarios", "campanias", "plataforma"].includes(n.key),
+            ).map((n) => n.key);
   const visibleNav = allowed
     .map((k) => NAV.find((n) => n.key === k))
     .filter(Boolean) as { key: Section; label: string; icon: typeof Users }[];
@@ -2740,6 +2840,7 @@ export function Dashboard() {
           {section === "facturacion" && <Facturacion />}
           {section === "usuarios" && <GestionUsuarios />}
           {section === "campanias" && <GestionCampanias />}
+          {section === "plataforma" && <PanelPlataforma onIr={setSection} />}
         </main>
       </div>
     </div>

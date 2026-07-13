@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, ChevronDown } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Search } from "lucide-react";
 
 export function TopBar({
   title,
@@ -172,17 +172,28 @@ export function Dropdown<T extends string>({
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const selected = options.find((o) => o.value === value);
+  // Con listas largas se muestra un buscador para filtrar escribiendo.
+  const conBuscador = options.length > 5;
+  const filtradas = query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setQuery("");
+      return;
+    }
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
+    if (conBuscador) requestAnimationFrame(() => searchRef.current?.focus());
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [open, conBuscador]);
 
   return (
     <div className="block space-y-1.5">
@@ -204,28 +215,45 @@ export function Dropdown<T extends string>({
           />
         </button>
         {open && (
-          <div className="pop-in no-scrollbar absolute z-30 mt-2 max-h-64 w-full origin-top overflow-y-auto rounded-2xl bg-white p-1.5 shadow-float">
-            {options.map((o) => {
-              const active = o.value === value;
-              return (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(o.value);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[14px] transition-colors ${
-                    active
-                      ? "bg-primary-tint font-semibold text-primary-dark"
-                      : "text-ink-soft hover:bg-surface"
-                  }`}
-                >
-                  <span>{o.label}</span>
-                  {active && <Check size={16} className="text-primary" />}
-                </button>
-              );
-            })}
+          <div className="pop-in absolute z-30 mt-2 w-full origin-top overflow-hidden rounded-2xl bg-white p-1.5 shadow-float">
+            {conBuscador && (
+              <div className="relative mb-1">
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+                <input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Buscar…"
+                  className="w-full rounded-xl border border-line bg-surface py-2 pl-8 pr-3 text-[14px] text-ink outline-none focus:border-primary/40"
+                />
+              </div>
+            )}
+            <div className="no-scrollbar max-h-56 overflow-y-auto">
+              {filtradas.length === 0 && (
+                <p className="px-3 py-2.5 text-[13px] text-ink-muted">Sin resultados</p>
+              )}
+              {filtradas.map((o) => {
+                const active = o.value === value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(o.value);
+                      setOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[14px] transition-colors ${
+                      active
+                        ? "bg-primary-tint font-semibold text-primary-dark"
+                        : "text-ink-soft hover:bg-surface"
+                    }`}
+                  >
+                    <span>{o.label}</span>
+                    {active && <Check size={16} className="text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
