@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import { Trash2, Shield } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Trash2, Shield, Upload, Download } from "lucide-react";
 import { listarUsuarios, crearUsuario, eliminarUsuario, type CuentaUsuario } from "../lib/api";
+import { importarCuentasExcel } from "../lib/import-excel";
+import { exportarExcel } from "../lib/export";
 import { Field, Dropdown, PrimaryButton } from "./ui";
 import { useApp } from "../store";
 
@@ -24,10 +26,36 @@ export function GestionUsuarios() {
   const [rol, setRol] = useState("vendedor");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [reporte, setReporte] = useState<{ creadas: number; errores: string[] } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const recargar = () => {
     void listarUsuarios().then(setUsuarios);
   };
+
+  const importar = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportando(true);
+    setReporte(null);
+    try {
+      const res = await importarCuentasExcel(file);
+      setReporte(res);
+      recargar();
+    } catch {
+      setReporte({ creadas: 0, errores: ["No se pudo leer el archivo. ¿Es un Excel o CSV válido?"] });
+    } finally {
+      setImportando(false);
+    }
+  };
+
+  const plantilla = () =>
+    void exportarExcel("plantilla-cuentas", [
+      { Nombre: "Juan Pérez", Usuario: "jperez", "Contraseña": "chaja2026", Rol: "vendedor" },
+      { Nombre: "Ana Gómez", Usuario: "agomez", "Contraseña": "chaja2026", Rol: "supervisor" },
+    ]);
   useEffect(() => {
     recargar();
   }, []);
@@ -61,6 +89,57 @@ export function GestionUsuarios() {
 
   return (
     <div className="max-w-3xl space-y-4">
+      <div className="card space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-display text-[14px] font-semibold text-ink">Importar cuentas</p>
+            <p className="text-[12px] text-ink-muted">
+              Subí un Excel o CSV con Nombre, Usuario, Contraseña y Rol para dar de alta varias de una vez.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={plantilla}
+              className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-3 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+            >
+              <Download size={15} /> Plantilla
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importando}
+              className="press flex items-center gap-1.5 rounded-2xl bg-primary px-3 py-2 text-[13px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark disabled:bg-disabled"
+            >
+              <Upload size={15} /> {importando ? "Importando…" : "Importar"}
+            </button>
+          </div>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => void importar(e)}
+        />
+        {reporte && (
+          <div className="rounded-2xl bg-surface p-3">
+            <p className="text-[13px] font-medium text-ink">
+              {reporte.creadas > 0
+                ? `${reporte.creadas} ${reporte.creadas === 1 ? "cuenta creada" : "cuentas creadas"}.`
+                : "No se creó ninguna cuenta."}
+            </p>
+            {reporte.errores.length > 0 && (
+              <ul className="mt-1 space-y-0.5">
+                {reporte.errores.map((x, i) => (
+                  <li key={i} className="text-[12px] text-danger">
+                    {x}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="card space-y-3">
         <p className="font-display text-[14px] font-semibold text-ink">Nueva cuenta</p>
         <div className="grid gap-3 sm:grid-cols-2">

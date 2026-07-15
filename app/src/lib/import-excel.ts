@@ -1,6 +1,67 @@
-import type { Producto, Productor } from "../types";
-import { saveProducto, productores } from "./api";
+import type { Producto, Productor, Rol } from "../types";
+import { saveProducto, productores, crearUsuario } from "./api";
 import { newId } from "./db";
+
+export interface ImportCuentasResultado {
+  creadas: number;
+  errores: string[];
+}
+
+const ROLES_VALIDOS: Rol[] = ["vendedor", "supervisor", "gerente", "superadmin"];
+
+function normalizarRol(v: unknown): Rol {
+  const s = String(v ?? "")
+    .trim()
+    .toLowerCase();
+  if (s.startsWith("super admin") || s === "superadmin" || s.startsWith("super")) return "superadmin";
+  if (s.startsWith("gerent")) return "gerente";
+  if (s.startsWith("supervis")) return "supervisor";
+  return "vendedor";
+}
+
+// Alta masiva de cuentas desde Excel/CSV: Nombre, Usuario, Contraseña y Rol.
+// Reporta por fila para que el super admin sepa cuáles no entraron y por qué.
+export async function importarCuentasExcel(file: File): Promise<ImportCuentasResultado> {
+  const XLSX = await import("xlsx");
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  if (!sheet) return { creadas: 0, errores: ["El archivo no tiene ninguna hoja."] };
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+  let creadas = 0;
+  const errores: string[] = [];
+  for (const [i, r] of rows.entries()) {
+    const keys = Object.keys(r);
+    const pick = (...needles: string[]): unknown => {
+      const k = keys.find((key) => needles.some((nd) => key.toLowerCase().includes(nd)));
+      return k ? r[k] : undefined;
+    };
+    const str = (v: unknown): string => String(v ?? "").trim();
+
+    const fila = i + 2;
+    const nombre = str(pick("nombre", "apellido"));
+    const usuario = str(pick("usuario", "user", "login"));
+    const password = str(pick("contrase", "clave", "password", "pass"));
+    if (!nombre && !usuario) continue;
+    if (!nombre || !usuario || !password) {
+      errores.push(`Fila ${fila}: faltan nombre, usuario o contraseña.`);
+      continue;
+    }
+    const rol = normalizarRol(pick("rol", "perfil", "tipo"));
+    if (!ROLES_VALIDOS.includes(rol)) {
+      errores.push(`Fila ${fila}: rol inválido.`);
+      continue;
+    }
+    try {
+      await crearUsuario({ nombre, usuario, password, rol });
+      creadas++;
+    } catch {
+      errores.push(`Fila ${fila}: no se pudo crear "${usuario}" (¿ya existe?).`);
+    }
+  }
+  return { creadas, errores };
+}
 
 // Importa un catálogo de productos desde un Excel/CSV. Mapea las columnas por
 // nombre de encabezado de forma flexible (insensible a may/min y a variantes).

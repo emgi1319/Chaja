@@ -333,7 +333,12 @@ export function GestionCampanias() {
 
           {conImagen && (
             <div className="space-y-1.5">
-              <span className="label">Imagen / banner</span>
+              <span className="label">
+                Imagen / banner
+                {form.formato === "imagen" && (
+                  <span className="ml-1 font-normal text-ink-muted">— recomendado 900 × 300 px</span>
+                )}
+              </span>
               {form.imagen ? (
                 <div className="relative overflow-hidden rounded-2xl border border-line">
                   <img src={form.imagen} alt="" className="max-h-52 w-full object-cover" />
@@ -450,9 +455,9 @@ export function GestionCampanias() {
 function Preview({ form }: { form: typeof VACIO }) {
   if (form.formato === "imagen") {
     return form.imagen ? (
-      <img src={form.imagen} alt="" className="h-36 w-full rounded-2xl object-cover sm:h-44" />
+      <img src={form.imagen} alt="" className="aspect-[3/1] w-full rounded-2xl object-cover" />
     ) : (
-      <div className="flex h-36 w-full items-center justify-center rounded-2xl border border-dashed border-line bg-surface text-[13px] text-ink-muted sm:h-44">
+      <div className="flex aspect-[3/1] w-full items-center justify-center rounded-2xl border border-dashed border-line bg-surface text-[13px] text-ink-muted">
         Subí una imagen
       </div>
     );

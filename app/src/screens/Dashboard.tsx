@@ -45,6 +45,7 @@ import {
   Shield,
   Megaphone,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { useApp } from "../store";
 import {
   notasCampo,
@@ -2743,6 +2744,20 @@ export function Dashboard() {
           className="border-t border-white/10 p-3"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
         >
+          {/* Dentro del APK no tiene sentido ofrecer la descarga del APK. */}
+          {!Capacitor.isNativePlatform() && (
+            <a
+              href="/chaja.apk"
+              download="Chaja.apk"
+              title="Bajar app móvil"
+              className={`mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] text-white/65 transition-colors hover:bg-white/10 hover:text-white ${
+                collapsed ? "md:justify-center md:gap-0 md:px-0" : ""
+              }`}
+            >
+              <Download size={19} className="shrink-0" />
+              <span className={collapsed ? "inline md:hidden" : "inline"}>Bajar app móvil</span>
+            </a>
+          )}
           <div className={`flex items-center gap-2 ${collapsed ? "md:justify-center" : ""}`}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold">
               {user.nombre.charAt(0).toUpperCase()}

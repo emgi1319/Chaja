@@ -34,7 +34,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,png,svg,woff,woff2}"],
         navigateFallback: "index.html",
-        navigateFallbackDenylist: [/^\/api/],
+        // El .apk se sirve tal cual: sin excluirlo, el fallback devolvería el index
+        // y la descarga bajaría un HTML en vez del instalador.
+        navigateFallbackDenylist: [/^\/api/, /\.apk$/],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

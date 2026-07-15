@@ -19,11 +19,19 @@ function upsertUser(PDO $pdo, string $id, string $nombre, string $usuario, strin
 }
 
 upsertUser($pdo, 'usr-diego', 'Diego Romero', 'diego', 'diego', 'vendedor');
+upsertUser($pdo, 'usr-martin', 'Martín Suárez', 'martin', 'martin', 'vendedor');
+upsertUser($pdo, 'usr-lucia', 'Lucía Fernández', 'lucia', 'lucia', 'vendedor');
 upsertUser($pdo, 'usr-sandra', 'Sandra Méndez', 'sandra', 'sandra', 'supervisor');
 upsertUser($pdo, 'usr-admin', 'Pablo Herrera', 'admin', 'admin', 'gerente');
 upsertUser($pdo, 'usr-superadmin', 'Super Admin', 'superadmin', 'superadmin', 'superadmin');
 
-$owner = 'usr-diego';
+// Cada cartera pertenece a SU vendedor: el scope por owner de la API se apoya en
+// esto, así que un vendedor nunca ve los clientes de otro.
+$owners = [
+    'Diego Romero' => 'usr-diego',
+    'Martín Suárez' => 'usr-martin',
+    'Lucía Fernández' => 'usr-lucia',
+];
 
 $productos = [
     ['SEM-MZ-7210', 'Semilla', 'Semilla de maíz DK 7210 VT3P', 'Dekalb', 'Maíz híbrido', 'Bolsa 80.000 semillas', 320, 308, 300, 120],
@@ -37,6 +45,7 @@ $stmtProd = $pdo->prepare(
     'REPLACE INTO productos (id, codigo, categoria, nombre, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
 foreach ($productos as $i => $p) {
+    // El catálogo es de la empresa, no de un vendedor: se sirve a todos por igual.
     $id = 'prod-' . ($i + 1);
     $data = [
         'id' => $id, 'codigo' => $p[0], 'categoria' => $p[1], 'nombre' => $p[2], 'empresa' => $p[3],
@@ -130,9 +139,12 @@ unset($p, $u, $c);
 $stmtPdor = $pdo->prepare(
     'REPLACE INTO productores (id, owner, razon_social, localidad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
+$ownerDeProductor = [];
 foreach ($productores as $p) {
     $p['updatedAt'] = $now;
-    $stmtPdor->execute([$p['id'], $owner, $p['razonSocial'], $p['localidad'], json_encode($p, JSON_UNESCAPED_UNICODE), $now]);
+    $dueno = $owners[$p['vendedor']];
+    $ownerDeProductor[$p['id']] = ['owner' => $dueno, 'vendedor' => $p['vendedor']];
+    $stmtPdor->execute([$p['id'], $dueno, $p['razonSocial'], $p['localidad'], json_encode($p, JSON_UNESCAPED_UNICODE), $now]);
 }
 
 $operaciones = [
@@ -150,15 +162,17 @@ foreach ($operaciones as $o) {
         'producto' => $o[4], 'valorPotencial' => $o[5], 'etapa' => $o[6], 'estado' => $o[7],
         'fechaInicio' => date('c'), 'updatedAt' => $now,
     ];
-    $stmtOp->execute([$o[0], $owner, $o[1], $o[3], $o[4], $o[6], $o[7], $o[5], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
+    $dueno = $ownerDeProductor[$o[1]]['owner'];
+    $stmtOp->execute([$o[0], $dueno, $o[1], $o[3], $o[4], $o[6], $o[7], $o[5], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
 }
 
+// El último campo es el vendedor que lo cargó: define de quién es el referido.
 $referidos = [
-    ['ref-1', 'Juan Pérez', 'Nicolás Díaz', 'en_proceso', 600, 'Recontactar la semana próxima'],
-    ['ref-2', 'Laura Méndez', 'Juan Pérez', 'presupuesto', 300, 'Presupuesto de semilla de soja enviado'],
-    ['ref-3', 'Sergio Díaz', 'Lucía Fernández', 'visita', 450, 'Visita al campo agendada para el 18/06'],
-    ['ref-4', 'Marta Quiroga', 'Nicolás Díaz', 'venta', 800, 'Cerró compra de fertilizante'],
-    ['ref-5', 'Pablo Sosa', 'Diego Romero', 'no_venta', 0, 'Ya trabaja con otro proveedor'],
+    ['ref-1', 'Juan Pérez', 'Nicolás Díaz', 'en_proceso', 600, 'Recontactar la semana próxima', 'Diego Romero'],
+    ['ref-2', 'Laura Méndez', 'Juan Pérez', 'presupuesto', 300, 'Presupuesto de semilla de soja enviado', 'Martín Suárez'],
+    ['ref-3', 'Sergio Díaz', 'Lucía Fernández', 'visita', 450, 'Visita al campo agendada para el 18/06', 'Lucía Fernández'],
+    ['ref-4', 'Marta Quiroga', 'Nicolás Díaz', 'venta', 800, 'Cerró compra de fertilizante', 'Martín Suárez'],
+    ['ref-5', 'Pablo Sosa', 'Diego Romero', 'no_venta', 0, 'Ya trabaja con otro proveedor', 'Diego Romero'],
 ];
 $stmtRef = $pdo->prepare(
     'REPLACE INTO referidos (id, owner, nombre, proceso, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -166,9 +180,9 @@ $stmtRef = $pdo->prepare(
 foreach ($referidos as $r) {
     $data = [
         'id' => $r[0], 'nombre' => $r[1], 'referidor' => $r[2], 'proceso' => $r[3],
-        'hectareas' => $r[4], 'observaciones' => $r[5], 'updatedAt' => $now,
+        'hectareas' => $r[4], 'observaciones' => $r[5], 'creadoPor' => $r[6], 'updatedAt' => $now,
     ];
-    $stmtRef->execute([$r[0], $owner, $r[1], $r[3], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
+    $stmtRef->execute([$r[0], $owners[$r[6]], $r[1], $r[3], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
 }
 
 $notas = [
@@ -180,16 +194,18 @@ $stmtNota = $pdo->prepare(
     'REPLACE INTO actividades (id, owner, productor_id, actividad, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
 );
 foreach ($notas as $i => $n) {
+    $duenoNota = $ownerDeProductor[$n[1]];
     $data = [
         'id' => $n[0], 'productorId' => $n[1], 'productorNombre' => $n[2], 'cultivo' => $n[3],
-        'actividad' => $n[4], 'notaVisita' => $n[5], 'creadoPor' => 'Diego Romero',
+        'actividad' => $n[4], 'notaVisita' => $n[5], 'creadoPor' => $duenoNota['vendedor'],
         'fechaContacto' => date('c', time() - ($i + 1) * 86400), 'updatedAt' => $now,
     ];
-    $stmtNota->execute([$n[0], $owner, $n[1], $n[4], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
+    $stmtNota->execute([$n[0], $duenoNota['owner'], $n[1], $n[4], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
 }
 
-$msg = 'Datos de ejemplo cargados: usuarios (diego/diego vendedor, sandra/sandra supervisor, admin/admin gerente), '
-    . count($productos) . ' productos, ' . count($productores) . ' productores, '
-    . count($operaciones) . ' operaciones, ' . count($referidos) . ' referidos, ' . count($notas) . ' actividades.';
+$msg = 'Datos de ejemplo cargados: usuarios (diego, martin y lucia vendedores, sandra supervisor, '
+    . 'admin gerente, superadmin), ' . count($productos) . ' productos, ' . count($productores)
+    . ' productores repartidos por vendedor, ' . count($operaciones) . ' operaciones, '
+    . count($referidos) . ' referidos, ' . count($notas) . ' actividades.';
 
 echo PHP_SAPI === 'cli' ? $msg . "\n" : $msg;
