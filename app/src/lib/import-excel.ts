@@ -54,7 +54,7 @@ export async function importarCuentasExcel(file: File): Promise<ImportCuentasRes
       continue;
     }
     try {
-      await crearUsuario({ nombre, usuario, password, rol });
+      await crearUsuario({ nombre, usuario, password, rol, grupo: str(pick("grupo")) || undefined });
       creadas++;
     } catch {
       errores.push(`Fila ${fila}: no se pudo crear "${usuario}" (¿ya existe?).`);

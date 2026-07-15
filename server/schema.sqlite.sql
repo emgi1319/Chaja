@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   usuario TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   rol TEXT NOT NULL DEFAULT 'vendedor',
+  grupo TEXT,
+  lider_id TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

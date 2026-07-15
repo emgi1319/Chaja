@@ -1,19 +1,35 @@
 export type Rol = "vendedor" | "supervisor" | "gerente" | "superadmin";
 
+// El rol "gerente" se presenta como Líder de equipo: conserva la clave interna
+// para no migrar los datos ya cargados.
+export const ROL_LABEL: Record<Rol, string> = {
+  vendedor: "Vendedor",
+  supervisor: "Supervisor",
+  gerente: "Líder de equipo",
+  superadmin: "Super admin",
+};
+
+export function rolLabel(rol: string): string {
+  return ROL_LABEL[rol as Rol] ?? rol;
+}
+
 export interface User {
   id: string;
   nombre: string;
   usuario: string;
   rol: Rol;
+  grupo?: string | null;
 }
 
 export interface Entity {
   id: string;
   updatedAt: number;
   synced?: boolean;
+  // Cuenta dueña del registro; la asigna el servidor y habilita el modo sombra.
+  owner?: string;
 }
 
-export type AnuncioAudiencia = "todos" | "rol" | "usuario";
+export type AnuncioAudiencia = "todos" | "rol" | "grupo" | "usuario";
 export type AnuncioTema = "azul" | "verde" | "ambar" | "oscuro";
 export type AnuncioFormato = "imagen" | "imagen_texto" | "texto";
 
@@ -28,6 +44,7 @@ export interface Anuncio {
   enlace?: string;
   audiencia: AnuncioAudiencia;
   rol?: Rol;
+  grupo?: string;
   usuarioId?: string;
   usuarioNombre?: string;
   tema: AnuncioTema;

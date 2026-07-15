@@ -42,6 +42,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // Repositorio con sincronización diferida: guarda local primero (marcado como
 // pendiente) y sube al servidor cuando hay red. Si no hay backend o no hay
 // señal, el registro queda pendiente y se reintenta más tarde.
+// Modo sombra: el líder de equipo elige a quién mirar y todas las pantallas pasan
+// a mostrar el trabajo de esa persona. Vacío = todo su equipo.
+const SOMBRA_KEY = "chaja.sombra";
+let sombraOwner: string | null = localStorage.getItem(SOMBRA_KEY);
+
+export function setSombra(owner: string | null): void {
+  sombraOwner = owner;
+  if (owner) localStorage.setItem(SOMBRA_KEY, owner);
+  else localStorage.removeItem(SOMBRA_KEY);
+}
+
+export function getSombra(): string | null {
+  return sombraOwner;
+}
+
 export class SyncedCollection<T extends Entity> {
   private local: LocalCollection<T>;
 
@@ -53,7 +68,8 @@ export class SyncedCollection<T extends Entity> {
   }
 
   list(): T[] {
-    return this.local.list();
+    const all = this.local.list();
+    return sombraOwner ? all.filter((x) => x.owner === sombraOwner) : all;
   }
 
   get(id: string): T | null {
@@ -277,6 +293,8 @@ export interface CuentaUsuario {
   nombre: string;
   usuario: string;
   rol: string;
+  grupo?: string | null;
+  lider_id?: string | null;
 }
 
 export async function listarUsuarios(): Promise<CuentaUsuario[]> {
@@ -293,6 +311,8 @@ export async function crearUsuario(data: {
   usuario: string;
   password: string;
   rol: string;
+  grupo?: string;
+  liderId?: string;
 }): Promise<CuentaUsuario> {
   return await request<CuentaUsuario>("/usuarios", {
     method: "POST",
@@ -345,6 +365,7 @@ export function anuncioVisible(a: Anuncio, user: User): boolean {
   if (!a.activo) return false;
   if (a.audiencia === "todos") return true;
   if (a.audiencia === "rol") return a.rol === user.rol;
+  if (a.audiencia === "grupo") return !!a.grupo && a.grupo === user.grupo;
   if (a.audiencia === "usuario") return a.usuarioId === user.id;
   return false;
 }

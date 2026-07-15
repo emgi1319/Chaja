@@ -69,7 +69,10 @@ if ($name === 'login' && $method === 'POST') {
     $pdo->prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)')->execute([$token, $u['id']]);
     out([
         'token' => $token,
-        'user' => ['id' => $u['id'], 'nombre' => $u['nombre'], 'usuario' => $u['usuario'], 'rol' => $u['rol']],
+        'user' => [
+            'id' => $u['id'], 'nombre' => $u['nombre'], 'usuario' => $u['usuario'],
+            'rol' => $u['rol'], 'grupo' => $u['grupo'] ?? null,
+        ],
     ]);
 }
 
@@ -80,10 +83,27 @@ $user = $stmt->fetch();
 if (!$user) {
     fail('no autorizado', 401);
 }
-$canSeeAll = in_array($user['rol'], ['supervisor', 'gerente', 'superadmin'], true);
+// Quién puede administrar/asignar carteras.
+$esGestion = in_array($user['rol'], ['supervisor', 'gerente', 'superadmin'], true);
+
+// Owners cuyos registros puede ver el usuario. null = sin restricción (ve todo).
+// El líder de equipo (rol gerente) ve lo suyo y lo de los usuarios que tiene asignados.
+$ownersVisibles = null;
+if ($user['rol'] === 'vendedor') {
+    $ownersVisibles = [$user['id']];
+} elseif ($user['rol'] === 'gerente') {
+    $q = $pdo->prepare('SELECT id FROM users WHERE lider_id = ?');
+    $q->execute([$user['id']]);
+    $ownersVisibles = array_column($q->fetchAll(), 'id');
+    $ownersVisibles[] = $user['id'];
+}
+$canSeeAll = $ownersVisibles === null;
 
 if ($name === 'me' && $method === 'GET') {
-    out(['id' => $user['id'], 'nombre' => $user['nombre'], 'usuario' => $user['usuario'], 'rol' => $user['rol']]);
+    out([
+        'id' => $user['id'], 'nombre' => $user['nombre'], 'usuario' => $user['usuario'],
+        'rol' => $user['rol'], 'grupo' => $user['grupo'] ?? null,
+    ]);
 }
 
 if ($name === 'catalog' && $method === 'GET') {
@@ -137,10 +157,18 @@ if ($name === 'auditoria') {
 // pero crear y eliminar cuentas es exclusivo del super admin.
 if ($name === 'usuarios') {
     if ($method === 'GET') {
-        if (!$canSeeAll) {
+        if (!$esGestion) {
             fail('sin permiso', 403);
         }
-        $rows = $pdo->query('SELECT id, nombre, usuario, rol FROM users ORDER BY nombre')->fetchAll();
+        // El líder solo ve las cuentas de su equipo; gerencia y super admin, todas.
+        if ($user['rol'] === 'gerente') {
+            $q = $pdo->prepare(
+                'SELECT id, nombre, usuario, rol, grupo, lider_id FROM users WHERE lider_id = ? OR id = ? ORDER BY nombre',
+            );
+            $q->execute([$user['id'], $user['id']]);
+            out($q->fetchAll());
+        }
+        $rows = $pdo->query('SELECT id, nombre, usuario, rol, grupo, lider_id FROM users ORDER BY nombre')->fetchAll();
         out($rows);
     }
     if ($user['rol'] !== 'superadmin') {
@@ -152,6 +180,8 @@ if ($name === 'usuarios') {
         $nombre = trim((string) ($b['nombre'] ?? ''));
         $pass = (string) ($b['password'] ?? '');
         $rol = (string) ($b['rol'] ?? 'vendedor');
+        $grupo = trim((string) ($b['grupo'] ?? '')) ?: null;
+        $liderId = trim((string) ($b['liderId'] ?? '')) ?: null;
         if ($usuario === '' || $nombre === '' || $pass === '') {
             fail('faltan datos');
         }
@@ -164,9 +194,13 @@ if ($name === 'usuarios') {
             fail('el usuario ya existe', 409);
         }
         $id = 'usr-' . bin2hex(random_bytes(6));
-        $pdo->prepare('INSERT INTO users (id, nombre, usuario, password_hash, rol) VALUES (?, ?, ?, ?, ?)')
-            ->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol]);
-        out(['id' => $id, 'nombre' => $nombre, 'usuario' => $usuario, 'rol' => $rol], 201);
+        $pdo->prepare(
+            'INSERT INTO users (id, nombre, usuario, password_hash, rol, grupo, lider_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        )->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol, $grupo, $liderId]);
+        out([
+            'id' => $id, 'nombre' => $nombre, 'usuario' => $usuario, 'rol' => $rol,
+            'grupo' => $grupo, 'lider_id' => $liderId,
+        ], 201);
     }
     if ($method === 'DELETE') {
         $target = $parts[1] ?? '';
@@ -203,6 +237,9 @@ if ($name === 'anuncios') {
             }
             if ($aud === 'rol') {
                 return ($a['rol'] ?? '') === $user['rol'];
+            }
+            if ($aud === 'grupo') {
+                return ($a['grupo'] ?? '') !== '' && ($a['grupo'] ?? '') === ($user['grupo'] ?? '');
             }
             if ($aud === 'usuario') {
                 return ($a['usuarioId'] ?? '') === $user['id'];
@@ -253,13 +290,24 @@ $col = $collections[$name];
 $table = $col['table'];
 
 if ($method === 'GET') {
-    if ($col['owned'] && !$canSeeAll) {
-        $stmt = $pdo->prepare("SELECT data FROM {$table} WHERE owner = ? ORDER BY updated_at DESC");
-        $stmt->execute([$user['id']]);
-    } else {
+    // El catálogo es de la empresa: no tiene dueño ni se filtra.
+    if (!$col['owned']) {
         $stmt = $pdo->query("SELECT data FROM {$table} ORDER BY updated_at DESC");
+        out(array_map(fn ($r) => json_decode($r['data'], true), $stmt->fetchAll()));
     }
-    out(array_map(fn ($r) => json_decode($r['data'], true), $stmt->fetchAll()));
+    if ($ownersVisibles !== null) {
+        $marcas = implode(',', array_fill(0, count($ownersVisibles), '?'));
+        $stmt = $pdo->prepare("SELECT owner, data FROM {$table} WHERE owner IN ({$marcas}) ORDER BY updated_at DESC");
+        $stmt->execute($ownersVisibles);
+    } else {
+        $stmt = $pdo->query("SELECT owner, data FROM {$table} ORDER BY updated_at DESC");
+    }
+    // Se expone el dueño de cada registro para que el líder pueda ver el trabajo
+    // de un integrante puntual de su equipo (modo sombra).
+    out(array_map(
+        fn ($r) => array_merge(json_decode($r['data'], true), ['owner' => $r['owner']]),
+        $stmt->fetchAll(),
+    ));
 }
 
 if ($method === 'POST') {
@@ -270,19 +318,29 @@ if ($method === 'POST') {
     // Por defecto el registro es de quien lo carga. Cuando gerencia asigna una
     // cartera a un vendedor, el productor pasa a ser de ese vendedor para que lo vea.
     $dueno = $user['id'];
-    if ($name === 'productores' && $canSeeAll && !empty($item['vendedor'])) {
+    if ($name === 'productores' && $esGestion && !empty($item['vendedor'])) {
         $q = $pdo->prepare('SELECT id FROM users WHERE nombre = ? LIMIT 1');
         $q->execute([(string) $item['vendedor']]);
         if ($asignado = $q->fetch()) {
             $dueno = $asignado['id'];
         }
     }
-    $values = [
-        'id' => $item['id'],
-        'owner' => $dueno,
-        'data' => json_encode($item, JSON_UNESCAPED_UNICODE),
-        'updated_at' => (int) ($item['updatedAt'] ?? round(microtime(true) * 1000)),
-    ];
+    // Al corregir el registro de un integrante del equipo, el dueño no cambia:
+    // el líder ajusta el dato pero el trabajo sigue siendo del vendedor.
+    if ($col['owned'] && $esGestion) {
+        $q = $pdo->prepare("SELECT owner FROM {$table} WHERE id = ?");
+        $q->execute([$item['id']]);
+        if (($previo = $q->fetch()) && $name !== 'productores') {
+            $dueno = $previo['owner'];
+        }
+    }
+    unset($item['owner']);
+    $values = ['id' => $item['id']];
+    if ($col['owned']) {
+        $values['owner'] = $dueno;
+    }
+    $values['data'] = json_encode($item, JSON_UNESCAPED_UNICODE);
+    $values['updated_at'] = (int) ($item['updatedAt'] ?? round(microtime(true) * 1000));
     foreach ($col['cols'] as $dbcol => $field) {
         $values[$dbcol] = $item[$field] ?? null;
     }

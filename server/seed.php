@@ -11,18 +11,27 @@ require __DIR__ . '/db.php';
 $pdo = db_connect($config);
 $now = (int) round(microtime(true) * 1000);
 
-function upsertUser(PDO $pdo, string $id, string $nombre, string $usuario, string $pass, string $rol): void
-{
+function upsertUser(
+    PDO $pdo,
+    string $id,
+    string $nombre,
+    string $usuario,
+    string $pass,
+    string $rol,
+    ?string $grupo = null,
+    ?string $liderId = null,
+): void {
     $pdo->prepare(
-        'REPLACE INTO users (id, nombre, usuario, password_hash, rol) VALUES (?, ?, ?, ?, ?)',
-    )->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol]);
+        'REPLACE INTO users (id, nombre, usuario, password_hash, rol, grupo, lider_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol, $grupo, $liderId]);
 }
 
-upsertUser($pdo, 'usr-diego', 'Diego Romero', 'diego', 'diego', 'vendedor');
-upsertUser($pdo, 'usr-martin', 'Martín Suárez', 'martin', 'martin', 'vendedor');
-upsertUser($pdo, 'usr-lucia', 'Lucía Fernández', 'lucia', 'lucia', 'vendedor');
-upsertUser($pdo, 'usr-sandra', 'Sandra Méndez', 'sandra', 'sandra', 'supervisor');
-upsertUser($pdo, 'usr-admin', 'Pablo Herrera', 'admin', 'admin', 'gerente');
+// Pablo Herrera lidera al equipo: sin usuarios asignados el perfil de líder no sirve.
+upsertUser($pdo, 'usr-admin', 'Pablo Herrera', 'admin', 'admin', 'gerente', 'Agro Norte');
+upsertUser($pdo, 'usr-diego', 'Diego Romero', 'diego', 'diego', 'vendedor', 'Agro Norte', 'usr-admin');
+upsertUser($pdo, 'usr-martin', 'Martín Suárez', 'martin', 'martin', 'vendedor', 'Agro Norte', 'usr-admin');
+upsertUser($pdo, 'usr-lucia', 'Lucía Fernández', 'lucia', 'lucia', 'vendedor', 'Agro Norte', 'usr-admin');
+upsertUser($pdo, 'usr-sandra', 'Sandra Méndez', 'sandra', 'sandra', 'supervisor', 'Agro Norte', 'usr-admin');
 upsertUser($pdo, 'usr-superadmin', 'Super Admin', 'superadmin', 'superadmin', 'superadmin');
 
 // Cada cartera pertenece a SU vendedor: el scope por owner de la API se apoya en

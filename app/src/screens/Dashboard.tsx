@@ -44,6 +44,7 @@ import {
   Lightbulb,
   Shield,
   Megaphone,
+  Eye,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "../store";
@@ -96,6 +97,7 @@ import {
   type InsumoLinea,
   type Referido,
   type Anuncio,
+  rolLabel,
 } from "../types";
 import {
   productoresRows,
@@ -2443,7 +2445,7 @@ function Auditoria() {
             {e.fecha ? new Date(e.fecha).toLocaleString("es-AR") : "—"}
           </td>
           <td className="px-4 py-3 text-right font-medium text-ink">{e.usuario ?? "—"}</td>
-          <td className="px-4 py-3 text-right capitalize text-ink-soft">{e.rol ?? "—"}</td>
+          <td className="px-4 py-3 text-right text-ink-soft">{e.rol ? rolLabel(e.rol) : "—"}</td>
           <td className="px-4 py-3 text-right text-ink-soft">{e.cliente ?? "—"}</td>
           <td className="px-4 py-3 text-right">
             <span className="inline-flex items-center gap-1.5 text-[12px]">
@@ -2554,10 +2556,52 @@ function PanelSupervisor({ onParametros }: { onParametros: () => void }) {
   );
 }
 
+// El líder de equipo elige a quién mirar: todas las pantallas pasan a mostrar el
+// trabajo de esa persona, y puede corregir lo que esté mal cargado.
+function SelectorSombra() {
+  const user = useApp((s) => s.user);
+  const sombra = useApp((s) => s.sombra);
+  const setSombraStore = useApp((s) => s.setSombra);
+  const [equipo, setEquipo] = useState<CuentaUsuario[]>([]);
+
+  useEffect(() => {
+    void listarUsuarios().then((us) => setEquipo(us.filter((u) => u.id !== user?.id)));
+  }, [user?.id]);
+
+  if (!equipo.length) return null;
+  const actual = equipo.find((u) => u.id === sombra);
+
+  return (
+    <div className="hidden items-center gap-2 sm:flex">
+      <Eye size={15} className={sombra ? "text-primary" : "text-ink-muted"} />
+      <select
+        value={sombra ?? ""}
+        onChange={(e) => setSombraStore(e.target.value || null)}
+        aria-label="Ver el trabajo de"
+        className={`max-w-[190px] rounded-xl border bg-white px-2.5 py-1.5 text-[13px] outline-none ${
+          sombra ? "border-primary/40 font-semibold text-primary-dark" : "border-line text-ink-soft"
+        }`}
+      >
+        <option value="">Todo el equipo</option>
+        {equipo.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.nombre}
+          </option>
+        ))}
+      </select>
+      {actual && (
+        <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary-dark">
+          Viendo como sombra
+        </span>
+      )}
+    </div>
+  );
+}
+
 const ROL_PLATAFORMA: { rol: string; label: string; icon: typeof Users }[] = [
   { rol: "vendedor", label: "Vendedores", icon: Users },
   { rol: "supervisor", label: "Supervisores", icon: Activity },
-  { rol: "gerente", label: "Gerentes", icon: UserCheck },
+  { rol: "gerente", label: "Líderes de equipo", icon: UserCheck },
   { rol: "superadmin", label: "Super admins", icon: Shield },
 ];
 
@@ -2764,7 +2808,7 @@ export function Dashboard() {
             </div>
             <div className={collapsed ? "min-w-0 flex-1 md:hidden" : "min-w-0 flex-1"}>
               <p className="truncate text-[13px] font-medium">{user.nombre}</p>
-              <p className="text-[11px] capitalize text-white/55">{user.rol}</p>
+              <p className="text-[11px] text-white/55">{rolLabel(user.rol)}</p>
             </div>
             <button
               onClick={logout}
@@ -2800,6 +2844,7 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            {user.rol === "gerente" && <SelectorSombra />}
             {pend > 0 && (
               <span className="hidden rounded-pill bg-primary-tint px-3 py-1 text-[12px] font-medium text-primary-dark sm:inline">
                 {pend} sin sincronizar
@@ -2808,7 +2853,7 @@ export function Dashboard() {
             <div className="flex items-center gap-2.5">
               <div className="hidden text-right leading-tight sm:block">
                 <p className="text-[13px] font-semibold text-ink">{user.nombre}</p>
-                <p className="text-[11px] capitalize text-ink-muted">{user.rol}</p>
+                <p className="text-[11px] text-ink-muted">{rolLabel(user.rol)}</p>
               </div>
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-white">
                 {user.nombre

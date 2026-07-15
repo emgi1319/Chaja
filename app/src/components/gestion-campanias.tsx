@@ -30,13 +30,14 @@ const FORMATOS: { value: AnuncioFormato; label: string; icon: typeof Type }[] = 
 const AUDIENCIAS: { value: AnuncioAudiencia; label: string }[] = [
   { value: "todos", label: "Todos los usuarios" },
   { value: "rol", label: "Por tipo de usuario" },
+  { value: "grupo", label: "Por grupo" },
   { value: "usuario", label: "Un usuario específico" },
 ];
 
 const ROLES: { value: Rol; label: string }[] = [
   { value: "vendedor", label: "Vendedores" },
   { value: "supervisor", label: "Supervisores" },
-  { value: "gerente", label: "Gerentes" },
+  { value: "gerente", label: "Líderes de equipo" },
 ];
 
 const TEMAS: { value: AnuncioTema; label: string }[] = [
@@ -64,6 +65,7 @@ function formatoLabel(f: AnuncioFormato): string {
 function audienciaResumen(a: Anuncio): string {
   if (a.audiencia === "todos") return "Todos los usuarios";
   if (a.audiencia === "rol") return rolLabel(a.rol);
+  if (a.audiencia === "grupo") return `Grupo: ${a.grupo}`;
   return a.usuarioNombre ? `Usuario: ${a.usuarioNombre}` : "Usuario específico";
 }
 
@@ -106,6 +108,7 @@ const VACIO = {
   imagen: "",
   audiencia: "todos" as AnuncioAudiencia,
   rol: "vendedor" as Rol,
+  grupo: "",
   usuarioId: "",
   tema: "azul" as AnuncioTema,
   activo: true,
@@ -149,6 +152,7 @@ export function GestionCampanias() {
       imagen: a.imagen ?? "",
       audiencia: a.audiencia,
       rol: a.rol ?? "vendedor",
+      grupo: a.grupo ?? "",
       usuarioId: a.usuarioId ?? "",
       tema: a.tema,
       activo: a.activo,
@@ -164,6 +168,10 @@ export function GestionCampanias() {
 
   const conImagen = form.formato !== "texto";
   const conTexto = form.formato !== "imagen";
+  // Los grupos salen de las cuentas ya cargadas: son una etiqueta libre.
+  const grupos = Array.from(
+    new Set(usuarios.map((u) => (u.grupo ?? "").trim()).filter(Boolean)),
+  ).sort();
 
   const guardar = async () => {
     setError(null);
@@ -173,6 +181,14 @@ export function GestionCampanias() {
     }
     if (conTexto && !form.titulo.trim()) {
       setError("Escribí un título para la campaña.");
+      return;
+    }
+    if (form.audiencia === "grupo" && !form.grupo) {
+      setError("Elegí a qué grupo va dirigida.");
+      return;
+    }
+    if (form.audiencia === "usuario" && !form.usuarioId) {
+      setError("Elegí a qué usuario va dirigida.");
       return;
     }
     setSaving(true);
@@ -186,6 +202,7 @@ export function GestionCampanias() {
       enlace: form.enlace.trim() || undefined,
       audiencia: form.audiencia,
       rol: form.audiencia === "rol" ? form.rol : undefined,
+      grupo: form.audiencia === "grupo" ? form.grupo : undefined,
       usuarioId: form.audiencia === "usuario" ? form.usuarioId : undefined,
       usuarioNombre: form.audiencia === "usuario" ? usuario?.nombre : undefined,
       tema: form.tema,
@@ -401,6 +418,15 @@ export function GestionCampanias() {
             />
             {form.audiencia === "rol" && (
               <Dropdown label="Tipo de usuario" value={form.rol} options={ROLES} onChange={(v) => set("rol", v)} />
+            )}
+            {form.audiencia === "grupo" && (
+              <Dropdown
+                label="Grupo"
+                value={form.grupo}
+                options={grupos.map((g) => ({ value: g, label: g }))}
+                onChange={(v) => set("grupo", v)}
+                placeholder={grupos.length ? "Elegir grupo" : "Sin grupos cargados"}
+              />
             )}
             {form.audiencia === "usuario" && (
               <Dropdown

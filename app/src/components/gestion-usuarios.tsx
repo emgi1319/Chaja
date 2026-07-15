@@ -5,17 +5,16 @@ import { importarCuentasExcel } from "../lib/import-excel";
 import { exportarExcel } from "../lib/export";
 import { Field, Dropdown, PrimaryButton } from "./ui";
 import { useApp } from "../store";
+import { rolLabel } from "../types";
 
 const ROLES = [
   { value: "vendedor", label: "Vendedor" },
   { value: "supervisor", label: "Supervisor" },
-  { value: "gerente", label: "Gerente" },
+  { value: "gerente", label: "Líder de equipo" },
   { value: "superadmin", label: "Super admin" },
 ];
 
-function rolLabel(r: string): string {
-  return ROLES.find((x) => x.value === r)?.label ?? r;
-}
+const SIN_LIDER = "";
 
 export function GestionUsuarios() {
   const yo = useApp((s) => s.user);
@@ -24,6 +23,8 @@ export function GestionUsuarios() {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState("vendedor");
+  const [grupo, setGrupo] = useState("");
+  const [liderId, setLiderId] = useState(SIN_LIDER);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
@@ -53,9 +54,13 @@ export function GestionUsuarios() {
 
   const plantilla = () =>
     void exportarExcel("plantilla-cuentas", [
-      { Nombre: "Juan Pérez", Usuario: "jperez", "Contraseña": "chaja2026", Rol: "vendedor" },
-      { Nombre: "Ana Gómez", Usuario: "agomez", "Contraseña": "chaja2026", Rol: "supervisor" },
+      { Nombre: "Juan Pérez", Usuario: "jperez", "Contraseña": "chaja2026", Rol: "vendedor", Grupo: "Agro Norte" },
+      { Nombre: "Ana Gómez", Usuario: "agomez", "Contraseña": "chaja2026", Rol: "supervisor", Grupo: "Agro Norte" },
     ]);
+
+  const lideres = usuarios.filter((u) => u.rol === "gerente");
+  const puedeTenerLider = rol === "vendedor" || rol === "supervisor";
+  const nombreLider = (id?: string | null) => usuarios.find((u) => u.id === id)?.nombre;
   useEffect(() => {
     recargar();
   }, []);
@@ -68,11 +73,21 @@ export function GestionUsuarios() {
     }
     setSaving(true);
     try {
-      await crearUsuario({ nombre: nombre.trim(), usuario: usuario.trim(), password, rol });
+      await crearUsuario({
+        nombre: nombre.trim(),
+        usuario: usuario.trim(),
+        password,
+        rol,
+        grupo: grupo.trim() || undefined,
+        // Solo vendedores y supervisores responden a un líder de equipo.
+        liderId: puedeTenerLider ? liderId || undefined : undefined,
+      });
       setNombre("");
       setUsuario("");
       setPassword("");
       setRol("vendedor");
+      setGrupo("");
+      setLiderId(SIN_LIDER);
       recargar();
     } catch {
       setError("No se pudo crear la cuenta. ¿El usuario ya existe?");
@@ -147,7 +162,28 @@ export function GestionUsuarios() {
           <Field label="Usuario (para ingresar)" value={usuario} onChange={setUsuario} />
           <Field label="Contraseña" value={password} onChange={setPassword} />
           <Dropdown label="Rol" value={rol} options={ROLES} onChange={setRol} />
+          <Field
+            label="Grupo"
+            value={grupo}
+            onChange={setGrupo}
+            placeholder="Ej: Agro Norte"
+          />
+          {puedeTenerLider && (
+            <Dropdown
+              label="Líder de equipo"
+              value={liderId}
+              options={[
+                { value: SIN_LIDER, label: "Sin líder asignado" },
+                ...lideres.map((l) => ({ value: l.id, label: l.nombre })),
+              ]}
+              onChange={setLiderId}
+            />
+          )}
         </div>
+        <p className="text-[12px] text-ink-muted">
+          El grupo es una etiqueta para segmentar campañas. El líder de equipo ve y puede corregir
+          el trabajo de los usuarios que tenga asignados.
+        </p>
         {error && <p className="text-[12px] font-medium text-danger">{error}</p>}
         <div className="sm:max-w-xs">
           <PrimaryButton disabled={saving} onClick={crear}>
@@ -164,13 +200,15 @@ export function GestionUsuarios() {
                 <th className="px-4 py-3 font-medium">Nombre</th>
                 <th className="px-4 py-3 font-medium">Usuario</th>
                 <th className="px-4 py-3 font-medium">Rol</th>
+                <th className="px-4 py-3 font-medium">Grupo</th>
+                <th className="px-4 py-3 font-medium">Líder</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {usuarios.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-4 text-[13px] text-ink-muted">
+                  <td colSpan={6} className="px-4 py-4 text-[13px] text-ink-muted">
                     Sin cuentas cargadas todavía.
                   </td>
                 </tr>
@@ -185,6 +223,8 @@ export function GestionUsuarios() {
                       {rolLabel(u.rol)}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-ink-soft">{u.grupo || "—"}</td>
+                  <td className="px-4 py-3 text-ink-soft">{nombreLider(u.lider_id) || "—"}</td>
                   <td className="px-4 py-3 text-right">
                     {u.id !== yo?.id && (
                       <button
