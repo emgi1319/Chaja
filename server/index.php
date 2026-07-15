@@ -133,14 +133,18 @@ if ($name === 'auditoria') {
     }
 }
 
-// Gestión de cuentas: solo el super admin lista, crea y elimina usuarios.
+// Gestión de cuentas: gerencia puede consultar el listado (para asignar carteras),
+// pero crear y eliminar cuentas es exclusivo del super admin.
 if ($name === 'usuarios') {
-    if ($user['rol'] !== 'superadmin') {
-        fail('solo super admin', 403);
-    }
     if ($method === 'GET') {
+        if (!$canSeeAll) {
+            fail('sin permiso', 403);
+        }
         $rows = $pdo->query('SELECT id, nombre, usuario, rol FROM users ORDER BY nombre')->fetchAll();
         out($rows);
+    }
+    if ($user['rol'] !== 'superadmin') {
+        fail('solo super admin', 403);
     }
     if ($method === 'POST') {
         $b = body();
@@ -263,9 +267,19 @@ if ($method === 'POST') {
     if (($item['id'] ?? '') === '') {
         fail('falta id');
     }
+    // Por defecto el registro es de quien lo carga. Cuando gerencia asigna una
+    // cartera a un vendedor, el productor pasa a ser de ese vendedor para que lo vea.
+    $dueno = $user['id'];
+    if ($name === 'productores' && $canSeeAll && !empty($item['vendedor'])) {
+        $q = $pdo->prepare('SELECT id FROM users WHERE nombre = ? LIMIT 1');
+        $q->execute([(string) $item['vendedor']]);
+        if ($asignado = $q->fetch()) {
+            $dueno = $asignado['id'];
+        }
+    }
     $values = [
         'id' => $item['id'],
-        'owner' => $user['id'],
+        'owner' => $dueno,
         'data' => json_encode($item, JSON_UNESCAPED_UNICODE),
         'updated_at' => (int) ($item['updatedAt'] ?? round(microtime(true) * 1000)),
     ];

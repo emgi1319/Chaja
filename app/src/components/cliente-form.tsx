@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, MapPin } from "lucide-react";
 import { Field, PrimaryButton, Dropdown } from "./ui";
-import { productores } from "../lib/api";
+import { productores, listarUsuarios, type CuentaUsuario } from "../lib/api";
 import { newId } from "../lib/db";
 import { CULTIVOS, type Cultivo, type Productor } from "../types";
 import { formatUsd, valorCultivo } from "../lib/valor-cliente";
 import { useApp } from "../store";
-import { DEMO_VENDEDORES } from "../lib/demo-data";
 import { getNombreCampania } from "../lib/parametros";
 import { getPosicion } from "../lib/native/geo";
 
@@ -31,7 +30,15 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
   const [email, setEmail] = useState("");
   const [cuitRut, setCuitRut] = useState("");
   const [credito, setCredito] = useState("");
-  const [vendedor, setVendedor] = useState(DEMO_VENDEDORES[0]?.nombre ?? "");
+  // El cliente se carga a nombre de quien lo da de alta; solo gerencia puede
+  // asignarlo a otro vendedor de la lista real de cuentas.
+  const esVendedor = user?.rol === "vendedor";
+  const [vendedor, setVendedor] = useState(user?.nombre ?? "");
+  const [vendedores, setVendedores] = useState<CuentaUsuario[]>([]);
+  useEffect(() => {
+    if (esVendedor) return;
+    void listarUsuarios().then((us) => setVendedores(us.filter((u) => u.rol === "vendedor")));
+  }, [esVendedor]);
   const [campania, setCampania] = useState(getNombreCampania());
   const [cultivos, setCultivos] = useState<CultivoDraft[]>([emptyCultivo()]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -95,12 +102,22 @@ export function ClienteForm({ onSaved }: { onSaved: () => void }) {
           onChange={setCredito}
           inputMode="decimal"
         />
-        <Dropdown
-          label="Vendedor asignado"
-          value={vendedor}
-          options={DEMO_VENDEDORES.map((v) => ({ value: v.nombre, label: v.nombre }))}
-          onChange={setVendedor}
-        />
+        {esVendedor ? (
+          <div className="block space-y-1.5">
+            <span className="label">Vendedor asignado</span>
+            <p className="rounded-2xl border border-line bg-surface px-4 py-3.5 text-[15px] text-ink">
+              {user?.nombre}
+            </p>
+          </div>
+        ) : (
+          <Dropdown
+            label="Vendedor asignado"
+            value={vendedor}
+            options={vendedores.map((v) => ({ value: v.nombre, label: v.nombre }))}
+            onChange={setVendedor}
+            placeholder="Elegir vendedor"
+          />
+        )}
         <Dropdown
           label="Campaña"
           value={campania}
