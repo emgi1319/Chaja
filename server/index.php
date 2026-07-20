@@ -117,7 +117,8 @@ if ($name === 'password' && $method === 'POST') {
     $b = body();
     $actual = (string) ($b['actual'] ?? '');
     $nueva = (string) ($b['nueva'] ?? '');
-    if (mb_strlen($nueva) < 4) {
+    // strlen y no mb_strlen: mbstring no esta disponible en el contenedor PHP.
+    if (strlen($nueva) < 4) {
         fail('la contrasena nueva debe tener al menos 4 caracteres');
     }
     if (!password_verify($actual, $user['password_hash'])) {
