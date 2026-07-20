@@ -295,6 +295,7 @@ export interface CuentaUsuario {
   rol: string;
   grupo?: string | null;
   lider_id?: string | null;
+  activo?: number | boolean;
 }
 
 export async function listarUsuarios(): Promise<CuentaUsuario[]> {
@@ -323,6 +324,20 @@ export async function crearUsuario(data: {
 export async function eliminarUsuario(id: string): Promise<void> {
   if (!API_BASE) return;
   await request(`/usuarios/${id}`, { method: "DELETE" });
+}
+
+// Desactivar conserva la cuenta pero le impide ingresar (y corta su sesión abierta).
+export async function cambiarEstadoUsuario(id: string, activo: boolean): Promise<void> {
+  if (!API_BASE) return;
+  await request(`/usuarios/${id}/estado`, {
+    method: "POST",
+    body: JSON.stringify({ activo: activo ? 1 : 0 }),
+  });
+}
+
+export async function cambiarPassword(actual: string, nueva: string): Promise<void> {
+  if (!API_BASE) throw new Error("sin conexión");
+  await request("/password", { method: "POST", body: JSON.stringify({ actual, nueva }) });
 }
 
 // Campañas / comunicados del super admin. En modo local se guardan en el
@@ -388,10 +403,17 @@ export function clearUser(): void {
 // TODO(backend): reemplazar el modo local por autenticación real contra la API.
 export async function login(usuario: string, password: string): Promise<User> {
   if (API_BASE) {
-    const res = await request<{ token: string; user: User }>("/login", {
-      method: "POST",
-      body: JSON.stringify({ usuario, password }),
-    });
+    let res: { token: string; user: User };
+    try {
+      res = await request<{ token: string; user: User }>("/login", {
+        method: "POST",
+        body: JSON.stringify({ usuario, password }),
+      });
+    } catch (e) {
+      // El servidor responde 403 cuando la cuenta existe pero está desactivada.
+      if (String(e).includes("403")) throw new Error("desactivada");
+      throw e;
+    }
     storeToken(res.token);
     return res.user;
   }

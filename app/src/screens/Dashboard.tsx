@@ -45,6 +45,7 @@ import {
   Shield,
   Megaphone,
   Eye,
+  KeyRound,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "../store";
@@ -70,6 +71,7 @@ import { EditarDatosCliente } from "../components/editar-datos-cliente";
 import { RegistrarVenta } from "../components/registrar-venta";
 import { GestionUsuarios } from "../components/gestion-usuarios";
 import { GestionCampanias } from "../components/gestion-campanias";
+import { CambiarPassword } from "../components/cambiar-password";
 import { AnunciosBanner } from "../components/anuncios-banner";
 import { CargarActividad } from "../components/cargar-actividad";
 import { FormulaAgronomica } from "../components/formula-agronomica";
@@ -2710,6 +2712,7 @@ export function Dashboard() {
     });
   const dataVersion = useApp((s) => s.dataVersion);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [cuentaOpen, setCuentaOpen] = useState(false);
   const [paramBack, setParamBack] = useState(false);
   const pend = pendingTotal();
 
@@ -2788,6 +2791,16 @@ export function Dashboard() {
           className="border-t border-white/10 p-3"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
         >
+          <button
+            onClick={() => setCuentaOpen(true)}
+            title="Mi cuenta"
+            className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] text-white/65 transition-colors hover:bg-white/10 hover:text-white ${
+              collapsed ? "md:justify-center md:gap-0 md:px-0" : ""
+            }`}
+          >
+            <KeyRound size={19} className="shrink-0" />
+            <span className={collapsed ? "inline md:hidden" : "inline"}>Mi cuenta</span>
+          </button>
           {/* Dentro del APK no tiene sentido ofrecer la descarga del APK. */}
           {!Capacitor.isNativePlatform() && (
             <a
@@ -2902,6 +2915,9 @@ export function Dashboard() {
           {section === "campanias" && <GestionCampanias />}
           {section === "plataforma" && <PanelPlataforma onIr={setSection} />}
         </main>
+        <Drawer open={cuentaOpen} onClose={() => setCuentaOpen(false)} title="Mi cuenta">
+          <CambiarPassword onListo={() => setCuentaOpen(false)} />
+        </Drawer>
       </div>
     </div>
   );

@@ -17,8 +17,12 @@ export function Login() {
     try {
       const user = await login(usuario.trim(), password);
       setUser(user);
-    } catch {
-      setError("Usuario o contraseña incorrectos.");
+    } catch (e) {
+      setError(
+        String(e).includes("desactivada")
+          ? "Tu cuenta está desactivada. Contactá al administrador."
+          : "Usuario o contraseña incorrectos.",
+      );
     } finally {
       setLoading(false);
     }

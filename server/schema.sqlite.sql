@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   rol TEXT NOT NULL DEFAULT 'vendedor',
   grupo TEXT,
   lider_id TEXT,
+  activo INTEGER NOT NULL DEFAULT 1,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

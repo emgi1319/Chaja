@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Trash2, Shield, Upload, Download } from "lucide-react";
-import { listarUsuarios, crearUsuario, eliminarUsuario, type CuentaUsuario } from "../lib/api";
+import { Trash2, Shield, Upload, Download, Wand2, Power } from "lucide-react";
+import {
+  listarUsuarios,
+  crearUsuario,
+  eliminarUsuario,
+  cambiarEstadoUsuario,
+  type CuentaUsuario,
+} from "../lib/api";
 import { importarCuentasExcel } from "../lib/import-excel";
 import { exportarExcel } from "../lib/export";
 import { Field, Dropdown, PrimaryButton } from "./ui";
@@ -16,6 +22,20 @@ const ROLES = [
 
 const SIN_LIDER = "";
 
+// Contraseña legible para entregar en una demo (sin caracteres que se confundan).
+function generarPassword(): string {
+  const letras = "abcdefghijkmnpqrstuvwxyz";
+  const numeros = "23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) out += letras[Math.floor(Math.random() * letras.length)];
+  for (let i = 0; i < 3; i++) out += numeros[Math.floor(Math.random() * numeros.length)];
+  return out;
+}
+
+function esActivo(u: CuentaUsuario): boolean {
+  return u.activo === undefined || u.activo === 1 || u.activo === true;
+}
+
 export function GestionUsuarios() {
   const yo = useApp((s) => s.user);
   const [usuarios, setUsuarios] = useState<CuentaUsuario[]>([]);
@@ -25,6 +45,7 @@ export function GestionUsuarios() {
   const [rol, setRol] = useState("vendedor");
   const [grupo, setGrupo] = useState("");
   const [liderId, setLiderId] = useState(SIN_LIDER);
+  const [creada, setCreada] = useState<{ usuario: string; password: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
@@ -73,6 +94,7 @@ export function GestionUsuarios() {
     }
     setSaving(true);
     try {
+      setCreada({ usuario: usuario.trim(), password });
       await crearUsuario({
         nombre: nombre.trim(),
         usuario: usuario.trim(),
@@ -90,6 +112,7 @@ export function GestionUsuarios() {
       setLiderId(SIN_LIDER);
       recargar();
     } catch {
+      setCreada(null);
       setError("No se pudo crear la cuenta. ¿El usuario ya existe?");
     } finally {
       setSaving(false);
@@ -99,6 +122,12 @@ export function GestionUsuarios() {
   const borrar = async (u: CuentaUsuario) => {
     if (u.id === yo?.id) return;
     await eliminarUsuario(u.id);
+    recargar();
+  };
+
+  const alternarEstado = async (u: CuentaUsuario) => {
+    if (u.id === yo?.id) return;
+    await cambiarEstadoUsuario(u.id, !esActivo(u));
     recargar();
   };
 
@@ -160,7 +189,19 @@ export function GestionUsuarios() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Nombre" value={nombre} onChange={setNombre} />
           <Field label="Usuario (para ingresar)" value={usuario} onChange={setUsuario} />
-          <Field label="Contraseña" value={password} onChange={setPassword} />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="label">Contraseña</span>
+              <button
+                type="button"
+                onClick={() => setPassword(generarPassword())}
+                className="flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
+              >
+                <Wand2 size={13} /> Generar
+              </button>
+            </div>
+            <input value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
+          </div>
           <Dropdown label="Rol" value={rol} options={ROLES} onChange={setRol} />
           <Field
             label="Grupo"
@@ -185,6 +226,17 @@ export function GestionUsuarios() {
           el trabajo de los usuarios que tenga asignados.
         </p>
         {error && <p className="text-[12px] font-medium text-danger">{error}</p>}
+        {creada && (
+          <div className="rounded-2xl bg-accent/10 p-3">
+            <p className="text-[13px] font-medium text-ink">Cuenta creada. Datos para entregar:</p>
+            <p className="mt-0.5 font-mono text-[13px] text-ink">
+              usuario: <strong>{creada.usuario}</strong> · contraseña: <strong>{creada.password}</strong>
+            </p>
+            <p className="mt-0.5 text-[12px] text-ink-muted">
+              El usuario puede cambiarla desde "Mi cuenta" al ingresar.
+            </p>
+          </div>
+        )}
         <div className="sm:max-w-xs">
           <PrimaryButton disabled={saving} onClick={crear}>
             {saving ? "Creando…" : "Crear cuenta"}
@@ -202,19 +254,20 @@ export function GestionUsuarios() {
                 <th className="px-4 py-3 font-medium">Rol</th>
                 <th className="px-4 py-3 font-medium">Grupo</th>
                 <th className="px-4 py-3 font-medium">Líder</th>
+                <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {usuarios.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-4 text-[13px] text-ink-muted">
+                  <td colSpan={7} className="px-4 py-4 text-[13px] text-ink-muted">
                     Sin cuentas cargadas todavía.
                   </td>
                 </tr>
               )}
               {usuarios.map((u) => (
-                <tr key={u.id} className="border-t border-line">
+                <tr key={u.id} className={`border-t border-line ${esActivo(u) ? "" : "opacity-55"}`}>
                   <td className="px-4 py-3 font-medium text-ink">{u.nombre}</td>
                   <td className="px-4 py-3 text-ink-soft">{u.usuario}</td>
                   <td className="px-4 py-3">
@@ -225,15 +278,36 @@ export function GestionUsuarios() {
                   </td>
                   <td className="px-4 py-3 text-ink-soft">{u.grupo || "—"}</td>
                   <td className="px-4 py-3 text-ink-soft">{nombreLider(u.lider_id) || "—"}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-pill px-2 py-0.5 text-[12px] font-semibold ${
+                        esActivo(u) ? "bg-accent/15 text-accent-dark" : "bg-surface text-ink-muted"
+                      }`}
+                    >
+                      {esActivo(u) ? "Activa" : "Desactivada"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     {u.id !== yo?.id && (
-                      <button
-                        onClick={() => void borrar(u)}
-                        aria-label="Eliminar cuenta"
-                        className="text-ink-muted transition-colors hover:text-danger"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => void alternarEstado(u)}
+                          title={esActivo(u) ? "Desactivar cuenta" : "Activar cuenta"}
+                          aria-label={esActivo(u) ? "Desactivar cuenta" : "Activar cuenta"}
+                          className={`p-1.5 transition-colors ${
+                            esActivo(u) ? "text-ink-muted hover:text-amber" : "text-accent hover:text-accent-dark"
+                          }`}
+                        >
+                          <Power size={16} />
+                        </button>
+                        <button
+                          onClick={() => void borrar(u)}
+                          aria-label="Eliminar cuenta"
+                          className="p-1.5 text-ink-muted transition-colors hover:text-danger"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

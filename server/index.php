@@ -65,6 +65,9 @@ if ($name === 'login' && $method === 'POST') {
     if (!$u || !password_verify((string) ($b['password'] ?? ''), $u['password_hash'])) {
         fail('credenciales', 401);
     }
+    if ((int) ($u['activo'] ?? 1) === 0) {
+        fail('cuenta desactivada', 403);
+    }
     $token = bin2hex(random_bytes(32));
     $pdo->prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)')->execute([$token, $u['id']]);
     out([
@@ -77,7 +80,10 @@ if ($name === 'login' && $method === 'POST') {
 }
 
 // El resto requiere sesión
-$stmt = $pdo->prepare('SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?');
+// Una cuenta desactivada pierde el acceso en el acto, aunque ya tuviera sesión abierta.
+$stmt = $pdo->prepare(
+    'SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND u.activo = 1',
+);
 $stmt->execute([auth_token()]);
 $user = $stmt->fetch();
 if (!$user) {
@@ -104,6 +110,22 @@ if ($name === 'me' && $method === 'GET') {
         'id' => $user['id'], 'nombre' => $user['nombre'], 'usuario' => $user['usuario'],
         'rol' => $user['rol'], 'grupo' => $user['grupo'] ?? null,
     ]);
+}
+
+// Cambio de contraseña propia: cualquier usuario, validando la actual.
+if ($name === 'password' && $method === 'POST') {
+    $b = body();
+    $actual = (string) ($b['actual'] ?? '');
+    $nueva = (string) ($b['nueva'] ?? '');
+    if (mb_strlen($nueva) < 4) {
+        fail('la contrasena nueva debe tener al menos 4 caracteres');
+    }
+    if (!password_verify($actual, $user['password_hash'])) {
+        fail('la contrasena actual no coincide', 403);
+    }
+    $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+        ->execute([password_hash($nueva, PASSWORD_DEFAULT), $user['id']]);
+    out(['ok' => true]);
 }
 
 if ($name === 'catalog' && $method === 'GET') {
@@ -168,11 +190,31 @@ if ($name === 'usuarios') {
             $q->execute([$user['id'], $user['id']]);
             out($q->fetchAll());
         }
-        $rows = $pdo->query('SELECT id, nombre, usuario, rol, grupo, lider_id FROM users ORDER BY nombre')->fetchAll();
+        $rows = $pdo->query(
+            'SELECT id, nombre, usuario, rol, grupo, lider_id, activo FROM users ORDER BY nombre',
+        )->fetchAll();
         out($rows);
     }
     if ($user['rol'] !== 'superadmin') {
         fail('solo super admin', 403);
+    }
+
+    // Activar/desactivar: la cuenta se conserva, pero deja de poder ingresar.
+    if ($method === 'POST' && ($parts[2] ?? '') === 'estado') {
+        $target = (string) ($parts[1] ?? '');
+        if ($target === '') {
+            fail('falta id');
+        }
+        if ($target === $user['id']) {
+            fail('no podes desactivar tu propia cuenta', 400);
+        }
+        $activo = empty(body()['activo']) ? 0 : 1;
+        $pdo->prepare('UPDATE users SET activo = ? WHERE id = ?')->execute([$activo, $target]);
+        if (!$activo) {
+            // Se cierran sus sesiones para que salga de la app de inmediato.
+            $pdo->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$target]);
+        }
+        out(['ok' => true, 'activo' => $activo]);
     }
     if ($method === 'POST') {
         $b = body();

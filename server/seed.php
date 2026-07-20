@@ -21,8 +21,18 @@ function upsertUser(
     ?string $grupo = null,
     ?string $liderId = null,
 ): void {
+    // Si la cuenta ya existe se actualizan sus datos pero NO el estado activo ni la
+    // contraseña: el super admin puede haber desactivado la demo o el usuario
+    // haberla cambiado, y un redeploy no debe pisar eso.
+    $existe = $pdo->prepare('SELECT id FROM users WHERE id = ?');
+    $existe->execute([$id]);
+    if ($existe->fetch()) {
+        $pdo->prepare('UPDATE users SET nombre = ?, usuario = ?, rol = ?, grupo = ?, lider_id = ? WHERE id = ?')
+            ->execute([$nombre, $usuario, $rol, $grupo, $liderId, $id]);
+        return;
+    }
     $pdo->prepare(
-        'REPLACE INTO users (id, nombre, usuario, password_hash, rol, grupo, lider_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO users (id, nombre, usuario, password_hash, rol, grupo, lider_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
     )->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol, $grupo, $liderId]);
 }
 

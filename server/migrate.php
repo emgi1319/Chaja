@@ -35,8 +35,16 @@ if (($driver ?? 'mysql') !== 'sqlite') {
 // Altas posteriores sobre una tabla que ya existe: el CREATE TABLE IF NOT EXISTS
 // no agrega columnas, asi que se suman aca (falla en silencio si ya estan).
 $columnasNuevas = ($driver ?? 'mysql') === 'sqlite'
-    ? ['ALTER TABLE users ADD COLUMN grupo TEXT', 'ALTER TABLE users ADD COLUMN lider_id TEXT']
-    : ['ALTER TABLE users ADD COLUMN grupo VARCHAR(120)', 'ALTER TABLE users ADD COLUMN lider_id VARCHAR(40)'];
+    ? [
+        'ALTER TABLE users ADD COLUMN grupo TEXT',
+        'ALTER TABLE users ADD COLUMN lider_id TEXT',
+        'ALTER TABLE users ADD COLUMN activo INTEGER NOT NULL DEFAULT 1',
+    ]
+    : [
+        'ALTER TABLE users ADD COLUMN grupo VARCHAR(120)',
+        'ALTER TABLE users ADD COLUMN lider_id VARCHAR(40)',
+        'ALTER TABLE users ADD COLUMN activo TINYINT NOT NULL DEFAULT 1',
+    ];
 foreach ($columnasNuevas as $sql) {
     try {
         $pdo->exec($sql);
