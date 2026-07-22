@@ -2884,9 +2884,9 @@ export function Dashboard() {
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
           className="fade-in flex-1 overflow-y-auto"
         >
-          {/* Contenido centrado con ancho máximo: dashboard con aire a los lados,
-              no pegado a los bordes ni estirado de punta a punta. */}
-          <div className="mx-auto w-full max-w-6xl px-4 py-4 md:px-8 md:py-6 lg:px-10">
+          {/* Ancho completo con buen padding lateral para que no quede apretado a los
+              bordes; el max-w alto solo evita que se estire de más en monitores enormes. */}
+          <div className="mx-auto w-full max-w-[1800px] px-5 py-4 md:px-10 md:py-6">
           <AnunciosBanner />
           <SectionBanner section={section} />
           {section === "inicio" && <Inicio />}
