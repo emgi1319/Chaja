@@ -19,9 +19,14 @@ function normalizarRol(v: unknown): Rol {
   return "vendedor";
 }
 
-// Alta masiva de cuentas desde Excel/CSV: Nombre, Usuario, Contraseña y Rol.
-// Reporta por fila para que el super admin sepa cuáles no entraron y por qué.
-export async function importarCuentasExcel(file: File): Promise<ImportCuentasResultado> {
+// Alta masiva de cuentas desde CSV/Excel. Columnas flexibles: Nombre, Apellido,
+// Usuario, Contraseña, Grupo (y Rol si no se fija uno). `rolFijo` fuerza el rol de
+// todas las filas (lo elige el super admin en el dropdown de la carga masiva).
+// Reporta por fila para que se vea cuáles no entraron y por qué.
+export async function importarCuentasExcel(
+  file: File,
+  opts?: { rolFijo?: Rol },
+): Promise<ImportCuentasResultado> {
   const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
@@ -33,14 +38,24 @@ export async function importarCuentasExcel(file: File): Promise<ImportCuentasRes
   const errores: string[] = [];
   for (const [i, r] of rows.entries()) {
     const keys = Object.keys(r);
+    const keyOf = (...needles: string[]): string | undefined =>
+      keys.find((key) => needles.some((nd) => key.toLowerCase().includes(nd)));
     const pick = (...needles: string[]): unknown => {
-      const k = keys.find((key) => needles.some((nd) => key.toLowerCase().includes(nd)));
+      const k = keyOf(...needles);
       return k ? r[k] : undefined;
     };
     const str = (v: unknown): string => String(v ?? "").trim();
 
     const fila = i + 2;
-    const nombre = str(pick("nombre", "apellido"));
+    // Nombre y apellido pueden venir en columnas separadas: se combinan.
+    const kNombre = keyOf("nombre");
+    const kApellido = keyOf("apellido");
+    const nombre = [
+      kNombre ? str(r[kNombre]) : "",
+      kApellido && kApellido !== kNombre ? str(r[kApellido]) : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     const usuario = str(pick("usuario", "user", "login"));
     const password = str(pick("contrase", "clave", "password", "pass"));
     if (!nombre && !usuario) continue;
@@ -48,7 +63,7 @@ export async function importarCuentasExcel(file: File): Promise<ImportCuentasRes
       errores.push(`Fila ${fila}: faltan nombre, usuario o contraseña.`);
       continue;
     }
-    const rol = normalizarRol(pick("rol", "perfil", "tipo"));
+    const rol = opts?.rolFijo ?? normalizarRol(pick("rol", "perfil", "tipo"));
     if (!ROLES_VALIDOS.includes(rol)) {
       errores.push(`Fila ${fila}: rol inválido.`);
       continue;

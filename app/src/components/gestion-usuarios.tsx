@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Trash2, Shield, Upload, Download, Wand2, Power } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Trash2, Shield, Users, Download, Wand2, Power, ArrowLeft, UploadCloud } from "lucide-react";
 import {
   listarUsuarios,
   crearUsuario,
@@ -8,10 +8,10 @@ import {
   type CuentaUsuario,
 } from "../lib/api";
 import { importarCuentasExcel } from "../lib/import-excel";
-import { exportarExcel } from "../lib/export";
+import { descargarCsv } from "../lib/export";
 import { Field, Dropdown, PrimaryButton } from "./ui";
 import { useApp } from "../store";
-import { rolLabel } from "../types";
+import { rolLabel, type Rol } from "../types";
 
 const ROLES = [
   { value: "vendedor", label: "Vendedor" },
@@ -19,6 +19,9 @@ const ROLES = [
   { value: "gerente", label: "Líder de equipo" },
   { value: "superadmin", label: "Super admin" },
 ];
+
+// Roles que se pueden dar de alta masivamente (no tiene sentido crear super admins en lote).
+const ROLES_MASIVA = ROLES.filter((r) => r.value !== "superadmin");
 
 const SIN_LIDER = "";
 
@@ -48,36 +51,11 @@ export function GestionUsuarios() {
   const [creada, setCreada] = useState<{ usuario: string; password: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [importando, setImportando] = useState(false);
-  const [reporte, setReporte] = useState<{ creadas: number; errores: string[] } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [vista, setVista] = useState<"lista" | "masiva">("lista");
 
   const recargar = () => {
     void listarUsuarios().then(setUsuarios);
   };
-
-  const importar = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setImportando(true);
-    setReporte(null);
-    try {
-      const res = await importarCuentasExcel(file);
-      setReporte(res);
-      recargar();
-    } catch {
-      setReporte({ creadas: 0, errores: ["No se pudo leer el archivo. ¿Es un Excel o CSV válido?"] });
-    } finally {
-      setImportando(false);
-    }
-  };
-
-  const plantilla = () =>
-    void exportarExcel("plantilla-cuentas", [
-      { Nombre: "Juan Pérez", Usuario: "jperez", "Contraseña": "chaja2026", Rol: "vendedor", Grupo: "Agro Norte" },
-      { Nombre: "Ana Gómez", Usuario: "agomez", "Contraseña": "chaja2026", Rol: "supervisor", Grupo: "Agro Norte" },
-    ]);
 
   const lideres = usuarios.filter((u) => u.rol === "gerente");
   const puedeTenerLider = rol === "vendedor" || rol === "supervisor";
@@ -131,57 +109,26 @@ export function GestionUsuarios() {
     recargar();
   };
 
+  if (vista === "masiva") {
+    return (
+      <CargaMasiva
+        onVolver={() => {
+          setVista("lista");
+          recargar();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="max-w-3xl space-y-4">
-      <div className="card space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="font-display text-[14px] font-semibold text-ink">Importar cuentas</p>
-            <p className="text-[12px] text-ink-muted">
-              Subí un Excel o CSV con Nombre, Usuario, Contraseña y Rol para dar de alta varias de una vez.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={plantilla}
-              className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-3 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
-            >
-              <Download size={15} /> Plantilla
-            </button>
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={importando}
-              className="press flex items-center gap-1.5 rounded-2xl bg-primary px-3 py-2 text-[13px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark disabled:bg-disabled"
-            >
-              <Upload size={15} /> {importando ? "Importando…" : "Importar"}
-            </button>
-          </div>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          className="hidden"
-          onChange={(e) => void importar(e)}
-        />
-        {reporte && (
-          <div className="rounded-2xl bg-surface p-3">
-            <p className="text-[13px] font-medium text-ink">
-              {reporte.creadas > 0
-                ? `${reporte.creadas} ${reporte.creadas === 1 ? "cuenta creada" : "cuentas creadas"}.`
-                : "No se creó ninguna cuenta."}
-            </p>
-            {reporte.errores.length > 0 && (
-              <ul className="mt-1 space-y-0.5">
-                {reporte.errores.map((x, i) => (
-                  <li key={i} className="text-[12px] text-danger">
-                    {x}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setVista("masiva")}
+          className="press flex items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
+        >
+          <Users size={17} /> Carga masiva de usuarios
+        </button>
       </div>
 
       <div className="card space-y-3">
@@ -315,6 +262,143 @@ export function GestionUsuarios() {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CargaMasiva({ onVolver }: { onVolver: () => void }) {
+  const [rol, setRol] = useState<Rol>("vendedor");
+  const [file, setFile] = useState<File | null>(null);
+  const [drag, setDrag] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const [reporte, setReporte] = useState<{ creadas: number; errores: string[] } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const ejemplo = () =>
+    descargarCsv("ejemplo-usuarios-chaja", [
+      { Nombre: "Juan", Apellido: "Pérez", Usuario: "jperez", "Contraseña": "juan2026", Grupo: "Agro Norte" },
+      { Nombre: "Ana", Apellido: "Gómez", Usuario: "agomez", "Contraseña": "ana2026", Grupo: "Agro Norte" },
+    ]);
+
+  const tomar = (f?: File | null) => {
+    if (!f) return;
+    setFile(f);
+    setReporte(null);
+  };
+
+  const confirmar = async () => {
+    if (!file) return;
+    setImportando(true);
+    setReporte(null);
+    try {
+      const res = await importarCuentasExcel(file, { rolFijo: rol });
+      setReporte(res);
+    } catch {
+      setReporte({ creadas: 0, errores: ["No se pudo leer el archivo. ¿Es un CSV o Excel válido?"] });
+    } finally {
+      setImportando(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      <button
+        onClick={onVolver}
+        className="flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
+      >
+        <ArrowLeft size={16} /> Volver a cuentas
+      </button>
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-[16px] font-semibold text-ink">Carga masiva de usuarios</h2>
+          <p className="text-[13px] text-ink-soft">
+            Subí un CSV o Excel con Nombre, Apellido, Usuario y Contraseña. Todos se crean con el rol
+            que elijas.
+          </p>
+        </div>
+        <button
+          onClick={ejemplo}
+          className="flex items-center gap-1.5 rounded-2xl border border-line bg-white px-3 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+        >
+          <Download size={15} /> Descargar archivo de ejemplo
+        </button>
+      </div>
+
+      <div className="card space-y-4">
+        <div className="sm:max-w-xs">
+          <Dropdown
+            label="Rol de los usuarios a cargar"
+            value={rol}
+            options={ROLES_MASIVA as { value: Rol; label: string }[]}
+            onChange={setRol}
+          />
+        </div>
+
+        <div
+          onClick={() => fileRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDrag(true);
+          }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDrag(false);
+            tomar(e.dataTransfer.files?.[0]);
+          }}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-10 text-center transition-colors ${
+            drag ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary/40"
+          }`}
+        >
+          <UploadCloud size={28} className={drag ? "text-primary" : "text-ink-muted"} />
+          {file ? (
+            <p className="text-[14px] font-medium text-ink">{file.name}</p>
+          ) : (
+            <>
+              <p className="text-[14px] font-medium text-ink">
+                Arrastrá el archivo acá o hacé clic para elegirlo
+              </p>
+              <p className="text-[12px] text-ink-muted">Formatos: .csv, .xlsx</p>
+            </>
+          )}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          className="hidden"
+          onChange={(e) => {
+            tomar(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+
+        <div className="sm:max-w-xs">
+          <PrimaryButton disabled={!file || importando} onClick={confirmar}>
+            {importando ? "Creando cuentas…" : "Confirmar"}
+          </PrimaryButton>
+        </div>
+
+        {reporte && (
+          <div className="rounded-2xl bg-surface p-3">
+            <p className="text-[13px] font-medium text-ink">
+              {reporte.creadas > 0
+                ? `${reporte.creadas} ${reporte.creadas === 1 ? "cuenta creada" : "cuentas creadas"} con rol ${rolLabel(rol)}.`
+                : "No se creó ninguna cuenta."}
+            </p>
+            {reporte.errores.length > 0 && (
+              <ul className="mt-1 space-y-0.5">
+                {reporte.errores.map((x, i) => (
+                  <li key={i} className="text-[12px] text-danger">
+                    {x}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
