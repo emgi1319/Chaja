@@ -2882,8 +2882,11 @@ export function Dashboard() {
         <main
           key={`${section}-${dataVersion}`}
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
-          className="fade-in flex-1 overflow-y-auto p-4 md:p-6"
+          className="fade-in flex-1 overflow-y-auto"
         >
+          {/* Contenido centrado con ancho máximo: dashboard con aire a los lados,
+              no pegado a los bordes ni estirado de punta a punta. */}
+          <div className="mx-auto w-full max-w-6xl px-4 py-4 md:px-8 md:py-6 lg:px-10">
           <AnunciosBanner />
           <SectionBanner section={section} />
           {section === "inicio" && <Inicio />}
@@ -2914,6 +2917,7 @@ export function Dashboard() {
           {section === "usuarios" && <GestionUsuarios />}
           {section === "campanias" && <GestionCampanias />}
           {section === "plataforma" && <PanelPlataforma onIr={setSection} />}
+          </div>
         </main>
         <Drawer open={cuentaOpen} onClose={() => setCuentaOpen(false)} title="Mi cuenta">
           <CambiarPassword onListo={() => setCuentaOpen(false)} />

@@ -32,14 +32,14 @@ const TEMA: Record<AnuncioTema, { wrap: string; title: string; text: string; lin
 };
 
 function Contenido({ a }: { a: Anuncio }) {
-  // Solo imagen: ocupa todo el ancho con proporción de banner (3:1). Una imagen
-  // 900x300 entra exacta; una más alta se recorta al centro en vez de estirar la pantalla.
+  // Solo imagen: se muestra a proporción real, centrada y con un tope de alto para
+  // que no domine la pantalla (una 900x300 se ve completa, sin recortar ni estirar).
   if (a.formato === "imagen") {
     return (
       <img
         src={a.imagen}
         alt={a.titulo || ""}
-        className="aspect-[3/1] w-full rounded-2xl object-cover"
+        className="mx-auto block max-h-48 max-w-full rounded-2xl"
       />
     );
   }
