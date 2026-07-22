@@ -1906,7 +1906,7 @@ function Parametros({ onVolver }: { onVolver?: () => void }) {
     setTimeout(() => setSaved(false), 1500);
   };
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-4">
       {onVolver && (
         <button
           onClick={onVolver}
@@ -2057,7 +2057,7 @@ function Facturacion() {
   };
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-4">
       <p className="text-[13px] text-ink-muted">
         Cargá la facturación mes a mes de cada cliente. Con eso y el valor potencial se calcula el
         scoring del cliente.

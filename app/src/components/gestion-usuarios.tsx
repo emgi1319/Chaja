@@ -121,7 +121,7 @@ export function GestionUsuarios() {
   }
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="space-y-4">
       <div className="flex justify-end">
         <button
           onClick={() => setVista("masiva")}
@@ -133,7 +133,7 @@ export function GestionUsuarios() {
 
       <div className="card space-y-3">
         <p className="font-display text-[14px] font-semibold text-ink">Nueva cuenta</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Nombre" value={nombre} onChange={setNombre} />
           <Field label="Usuario (para ingresar)" value={usuario} onChange={setUsuario} />
           <div className="space-y-1.5">
@@ -302,7 +302,7 @@ function CargaMasiva({ onVolver }: { onVolver: () => void }) {
   };
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-4">
       <button
         onClick={onVolver}
         className="flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
@@ -326,79 +326,92 @@ function CargaMasiva({ onVolver }: { onVolver: () => void }) {
         </button>
       </div>
 
-      <div className="card space-y-4">
-        <div className="sm:max-w-xs">
+      <div className="card grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="space-y-4">
           <Dropdown
             label="Rol de los usuarios a cargar"
             value={rol}
             options={ROLES_MASIVA as { value: Rol; label: string }[]}
             onChange={setRol}
           />
-        </div>
-
-        <div
-          onClick={() => fileRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDrag(true);
-          }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDrag(false);
-            tomar(e.dataTransfer.files?.[0]);
-          }}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-10 text-center transition-colors ${
-            drag ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary/40"
-          }`}
-        >
-          <UploadCloud size={28} className={drag ? "text-primary" : "text-ink-muted"} />
-          {file ? (
-            <p className="text-[14px] font-medium text-ink">{file.name}</p>
-          ) : (
-            <>
-              <p className="text-[14px] font-medium text-ink">
-                Arrastrá el archivo acá o hacé clic para elegirlo
-              </p>
-              <p className="text-[12px] text-ink-muted">Formatos: .csv, .xlsx</p>
-            </>
-          )}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.xlsx,.xls"
-          className="hidden"
-          onChange={(e) => {
-            tomar(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
-
-        <div className="sm:max-w-xs">
-          <PrimaryButton disabled={!file || importando} onClick={confirmar}>
-            {importando ? "Creando cuentas…" : "Confirmar"}
-          </PrimaryButton>
-        </div>
-
-        {reporte && (
           <div className="rounded-2xl bg-surface p-3">
-            <p className="text-[13px] font-medium text-ink">
-              {reporte.creadas > 0
-                ? `${reporte.creadas} ${reporte.creadas === 1 ? "cuenta creada" : "cuentas creadas"} con rol ${rolLabel(rol)}.`
-                : "No se creó ninguna cuenta."}
+            <p className="text-[12px] font-semibold text-ink">Columnas del archivo</p>
+            <ul className="mt-1 space-y-0.5 text-[12px] text-ink-soft">
+              <li>Nombre · Apellido</li>
+              <li>Usuario · Contraseña</li>
+              <li>Grupo (opcional)</li>
+            </ul>
+            <p className="mt-1.5 text-[12px] text-ink-muted">
+              El rol lo definís acá y aplica a todas las filas.
             </p>
-            {reporte.errores.length > 0 && (
-              <ul className="mt-1 space-y-0.5">
-                {reporte.errores.map((x, i) => (
-                  <li key={i} className="text-[12px] text-danger">
-                    {x}
-                  </li>
-                ))}
-              </ul>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div
+            onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDrag(true);
+            }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDrag(false);
+              tomar(e.dataTransfer.files?.[0]);
+            }}
+            className={`flex min-h-[220px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-10 text-center transition-colors ${
+              drag ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary/40"
+            }`}
+          >
+            <UploadCloud size={32} className={drag ? "text-primary" : "text-ink-muted"} />
+            {file ? (
+              <p className="text-[14px] font-medium text-ink">{file.name}</p>
+            ) : (
+              <>
+                <p className="text-[14px] font-medium text-ink">
+                  Arrastrá el archivo acá o hacé clic para elegirlo
+                </p>
+                <p className="text-[12px] text-ink-muted">Formatos: .csv, .xlsx</p>
+              </>
             )}
           </div>
-        )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              tomar(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+
+          <div className="sm:max-w-xs">
+            <PrimaryButton disabled={!file || importando} onClick={confirmar}>
+              {importando ? "Creando cuentas…" : "Confirmar"}
+            </PrimaryButton>
+          </div>
+
+          {reporte && (
+            <div className="rounded-2xl bg-surface p-3">
+              <p className="text-[13px] font-medium text-ink">
+                {reporte.creadas > 0
+                  ? `${reporte.creadas} ${reporte.creadas === 1 ? "cuenta creada" : "cuentas creadas"} con rol ${rolLabel(rol)}.`
+                  : "No se creó ninguna cuenta."}
+              </p>
+              {reporte.errores.length > 0 && (
+                <ul className="mt-1 space-y-0.5">
+                  {reporte.errores.map((x, i) => (
+                    <li key={i} className="text-[12px] text-danger">
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
