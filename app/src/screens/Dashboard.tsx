@@ -193,6 +193,7 @@ const RAIL_SUP: Section[] = [
   "inicio",
   "clientes",
   "seguimiento",
+  "actividad",
   "operaciones",
   "referidos",
   "reportes",
