@@ -179,6 +179,7 @@ export const ESTADOS_PROCESO = [
   "presupuesto",
   "en_proceso",
   "negociacion",
+  "remito",
   "venta",
   "no_venta",
   "facturacion",
@@ -199,6 +200,7 @@ export const ESTADO_PROCESO_LABEL: Record<EstadoProceso, string> = {
   presupuesto: "Presupuesto",
   en_proceso: "En proceso",
   negociacion: "Negociación",
+  remito: "Remito",
   venta: "Venta",
   no_venta: "No venta",
   facturacion: "Facturación",
@@ -209,6 +211,23 @@ export const ESTADO_PROCESO_LABEL: Record<EstadoProceso, string> = {
 export const MEDIOS_CONTACTO = ["Email", "Campo", "Agronomía", "Oficina cliente", "Otro"] as const;
 export type MedioContacto = (typeof MEDIOS_CONTACTO)[number];
 
+// Documento comercial estructurado que queda guardado en la actividad, para poder
+// listar por separado presupuestos, remitos y facturas.
+export type DocTipo = "presupuesto" | "remito" | "venta" | "factura";
+export interface DocLinea {
+  producto: string;
+  cantidad: number;
+  precio: number;
+  subtotal: number;
+  condiciones?: string;
+  observaciones?: string;
+}
+export interface DocumentoComercial {
+  tipo: DocTipo;
+  lineas: DocLinea[];
+  total: number;
+}
+
 export interface NotaCampo extends Entity {
   fechaContacto: string;
   productorId: string;
@@ -217,6 +236,7 @@ export interface NotaCampo extends Entity {
   medio?: MedioContacto;
   actividad: EstadoProceso;
   notaVisita: string;
+  documento?: DocumentoComercial;
   creadoPor?: string;
 }
 

@@ -289,6 +289,7 @@ const PROXIMA_ACCION: Record<string, string> = {
   presupuesto: "Seguir presupuesto enviado",
   en_proceso: "Avanzar negociación",
   negociacion: "Cerrar condiciones",
+  remito: "Facturar la entrega",
   venta: "Coordinar entrega",
   no_venta: "Reactivar más adelante",
   facturacion: "Gestionar cobranza",

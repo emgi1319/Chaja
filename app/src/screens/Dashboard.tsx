@@ -46,6 +46,7 @@ import {
   Megaphone,
   Eye,
   KeyRound,
+  FileText,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "../store";
@@ -99,6 +100,7 @@ import {
   type InsumoLinea,
   type Referido,
   type Anuncio,
+  type DocTipo,
   rolLabel,
 } from "../types";
 import {
@@ -122,6 +124,7 @@ import {
 } from "../lib/analytics";
 import {
   formatUsd,
+  formatUsd2,
   valorCultivo,
   facturadoCultivo,
   oportunidadCultivo,
@@ -155,6 +158,7 @@ type Section =
   | "facturacion"
   | "usuarios"
   | "campanias"
+  | "documentos"
   | "plataforma";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
@@ -165,6 +169,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "operaciones", label: "Operaciones", icon: Boxes },
   { key: "referidos", label: "Referidos", icon: UserPlus },
   { key: "actividad", label: "Agenda de actividades", icon: ClipboardCheck },
+  { key: "documentos", label: "Documentos", icon: FileText },
   { key: "equipo", label: "Equipo", icon: UserCheck },
   { key: "productos", label: "Productos", icon: Package },
   { key: "valorcliente", label: "Valor cliente", icon: Calculator },
@@ -184,6 +189,7 @@ const RAIL_VEND: Section[] = [
   "clientes",
   "valorcliente",
   "actividad",
+  "documentos",
   "seguimiento",
   "operaciones",
   "referidos",
@@ -194,6 +200,7 @@ const RAIL_SUP: Section[] = [
   "clientes",
   "seguimiento",
   "actividad",
+  "documentos",
   "operaciones",
   "referidos",
   "reportes",
@@ -225,6 +232,7 @@ const SECTION_TITLE: Record<Section, string> = {
   facturacion: "Facturación histórica y scoring",
   usuarios: "Gestión de cuentas",
   campanias: "Campañas y comunicados",
+  documentos: "Presupuestos, remitos y facturas",
 };
 
 // Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
@@ -246,6 +254,7 @@ const SECTION_DESC: Record<Section, string> = {
   facturacion: "Carga mensual de facturación y scoring de cada cliente.",
   usuarios: "Alta, baja y roles de las cuentas del sistema.",
   campanias: "Publicá banners y comunicados para los usuarios del sistema.",
+  documentos: "Todos los presupuestos, remitos y facturas cargados, en un solo lugar.",
 };
 
 // Banner destacado de cada sección (copia del modo "Descripciones" del demo).
@@ -317,6 +326,10 @@ const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
   campanias: {
     h: "Comunicá a tu red en el momento justo",
     p: "Publicá banners con imágenes y mensajes dirigidos a todos, a un tipo de usuario o a una cuenta puntual. Aparecen sobre el contenido de cada pantalla.",
+  },
+  documentos: {
+    h: "Tus documentos comerciales, ordenados",
+    p: "Presupuestos, remitos y facturas separados por tipo, con cliente, fecha y total. Todo lo que cargaste desde la agenda, listo para consultar.",
   },
 };
 
@@ -2173,6 +2186,67 @@ function Facturacion() {
   );
 }
 
+const DOC_TABS: { tipo: DocTipo; label: string }[] = [
+  { tipo: "presupuesto", label: "Presupuestos" },
+  { tipo: "remito", label: "Remitos" },
+  { tipo: "factura", label: "Facturas" },
+];
+
+function DocumentosScreen() {
+  const [tab, setTab] = useState<DocTipo>("presupuesto");
+  const todas = notasCampo.list();
+  const cuenta = (t: DocTipo) => todas.filter((n) => n.documento?.tipo === t).length;
+  const filas = todas
+    .filter((n) => n.documento?.tipo === tab)
+    .sort((a, b) => new Date(b.fechaContacto).getTime() - new Date(a.fechaContacto).getTime());
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {DOC_TABS.map((t) => {
+          const active = t.tipo === tab;
+          return (
+            <button
+              key={t.tipo}
+              onClick={() => setTab(t.tipo)}
+              className={`rounded-pill px-4 py-2 text-[13px] font-semibold transition-colors ${
+                active ? "bg-primary text-white" : "border border-line bg-white text-ink hover:bg-surface"
+              }`}
+            >
+              {t.label} <span className={active ? "text-white/80" : "text-ink-muted"}>· {cuenta(t.tipo)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <TableShell head={["Fecha", "Cliente", "Cargado por", "Ítems", "Total"]}>
+        {filas.length === 0 && (
+          <tr>
+            <td colSpan={5} className="px-4 py-6 text-[13px] text-ink-muted">
+              Todavía no hay {DOC_TABS.find((t) => t.tipo === tab)?.label.toLowerCase()} cargados.
+            </td>
+          </tr>
+        )}
+        {filas.map((n) => {
+          const d = n.documento!;
+          const items = d.lineas.map((l) => `${l.cantidad}× ${l.producto}`).join(", ");
+          return (
+            <tr key={n.id} className="border-t border-line align-top transition-colors hover:bg-surface">
+              <td className="px-4 py-3 text-ink-soft">{formatFecha(n.fechaContacto)}</td>
+              <td className="px-4 py-3 font-medium text-ink">{n.productorNombre}</td>
+              <td className="px-4 py-3 text-right text-ink-soft">{n.creadoPor || "—"}</td>
+              <td className="px-4 py-3 text-right text-ink-soft">
+                <span className="block max-w-[280px] truncate">{items || "—"}</span>
+              </td>
+              <td className="px-4 py-3 text-right font-semibold text-accent">{formatUsd2(d.total)}</td>
+            </tr>
+          );
+        })}
+      </TableShell>
+    </div>
+  );
+}
+
 function ValorClienteScreen() {
   const lista = productores.list();
   const [id, setId] = useState(lista[0]?.id ?? "");
@@ -2269,9 +2343,9 @@ function ValorClienteScreen() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi icon={Target} label="Valor potencial" value={formatUsd(potencial)} tone="accent" />
-        <Kpi icon={DollarSign} label="Facturado" value={formatUsd(facturado)} />
-        <Kpi icon={TrendingUp} label="Oportunidad" value={formatUsd(oportunidad)} tone="amber" />
+        <Kpi icon={Target} label="Valor potencial" value={formatUsd2(potencial)} tone="accent" />
+        <Kpi icon={DollarSign} label="Facturado" value={formatUsd2(facturado)} />
+        <Kpi icon={TrendingUp} label="Oportunidad" value={formatUsd2(oportunidad)} tone="amber" />
         <Kpi icon={Gauge} label="Capturado" value={formatPct(captura)} />
       </div>
 
@@ -2917,6 +2991,7 @@ export function Dashboard() {
           {section === "facturacion" && <Facturacion />}
           {section === "usuarios" && <GestionUsuarios />}
           {section === "campanias" && <GestionCampanias />}
+          {section === "documentos" && <DocumentosScreen />}
           {section === "plataforma" && <PanelPlataforma onIr={setSection} />}
           </div>
         </main>

@@ -8,7 +8,7 @@ import {
   getTiposInsumo,
   addTipoInsumo,
 } from "../lib/parametros";
-import { formatUsd } from "../lib/valor-cliente";
+import { formatUsd2 } from "../lib/valor-cliente";
 import { Drawer } from "./drawer";
 import { Field, PrimaryButton } from "./ui";
 
@@ -315,7 +315,7 @@ export function FormulaAgronomica({ onSaved }: { onSaved?: () => void }) {
                     />
                   </td>
                   <td className="whitespace-nowrap px-2 py-1.5 text-right font-semibold text-accent">
-                    {formatUsd((f.dosis || 0) * (f.costoUnit || 0))}
+                    {formatUsd2((f.dosis || 0) * (f.costoUnit || 0))}
                   </td>
                   <td className="px-2 py-1.5 text-right">
                     <button
@@ -370,7 +370,7 @@ export function FormulaAgronomica({ onSaved }: { onSaved?: () => void }) {
               key={c}
               className="rounded-pill bg-white px-2.5 py-1 text-[12px] font-medium text-ink shadow-card"
             >
-              {c}: <span className="text-accent">{formatUsd(v)}/ha</span>
+              {c}: <span className="text-accent">{formatUsd2(v)}/ha</span>
             </span>
           ))}
         </div>

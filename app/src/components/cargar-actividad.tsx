@@ -11,6 +11,8 @@ import {
   ESTADO_PROCESO_LABEL,
   type EstadoProceso,
   type NotaCampo,
+  type DocTipo,
+  type DocLinea,
 } from "../types";
 import { formatUsd } from "../lib/valor-cliente";
 import { getNombreCampania } from "../lib/parametros";
@@ -21,12 +23,15 @@ const GRUPOS: { grupo: string; estados: EstadoProceso[] }[] = [
     estados: ["inicio_contacto", "completar_datos", "agenda_visita", "carga_valor_cliente"],
   },
   { grupo: "Desarrollo", estados: ["visita_campo", "reunion_oficina", "asesoria", "presupuesto"] },
-  { grupo: "Cierre", estados: ["en_proceso", "negociacion", "venta", "no_venta"] },
+  { grupo: "Cierre", estados: ["en_proceso", "negociacion", "remito", "venta", "no_venta"] },
   { grupo: "Posventa", estados: ["facturacion", "cobranza"] },
   { grupo: "Otros", estados: ["otros"] },
 ];
 
 const MUEVE_PLATA: EstadoProceso[] = ["presupuesto", "venta", "facturacion", "cobranza"];
+// Actividades que cargan una tabla de productos (misma plantilla que Presupuesto).
+const USA_PLANTILLA: EstadoProceso[] = ["presupuesto", "remito", "venta", "facturacion"];
+const docTipoDe = (a: EstadoProceso): DocTipo => (a === "facturacion" ? "factura" : (a as DocTipo));
 
 function num(s: string): number {
   const n = parseFloat(s.replace(",", "."));
@@ -118,7 +123,7 @@ export function CargarActividad({
 
   const buildDetalle = (): string => {
     const partes: string[] = [];
-    if (actividad === "presupuesto" && lineas.some((l) => l.productoId)) {
+    if (USA_PLANTILLA.includes(actividad) && lineas.some((l) => l.productoId)) {
       const items = lineas
         .filter((l) => l.productoId)
         .map((l) => {
@@ -126,7 +131,7 @@ export function CargarActividad({
           return `${l.cantidad}x ${p?.nombre ?? ""}`;
         })
         .join(", ");
-      partes.push(`Presupuesto (${formatUsd(total)}): ${items}`);
+      partes.push(`${ESTADO_PROCESO_LABEL[actividad]} (${formatUsd(total)}): ${items}`);
     }
     if (actividad === "visita_campo" && visitaRows.some((r) => r.cultivo || r.ha.trim())) {
       const det = visitaRows
@@ -140,7 +145,7 @@ export function CargarActividad({
     }
     if (conclusiones.trim()) partes.push(`Conclusiones: ${conclusiones.trim()}`);
     if (comentarios.trim()) partes.push(`Asesoría: ${comentarios.trim()}`);
-    if (MUEVE_PLATA.includes(actividad) && num(monto) > 0 && actividad !== "presupuesto") {
+    if (MUEVE_PLATA.includes(actividad) && num(monto) > 0 && !USA_PLANTILLA.includes(actividad)) {
       partes.push(`Monto: ${formatUsd(num(monto))}`);
     }
     if (observaciones.trim()) partes.push(observaciones.trim());
@@ -175,6 +180,21 @@ export function CargarActividad({
         }
       }
     }
+    const docLineas: DocLinea[] = USA_PLANTILLA.includes(actividad)
+      ? lineas
+          .filter((l) => l.productoId)
+          .map((l) => {
+            const p = catalogo.find((x) => x.id === l.productoId);
+            return {
+              producto: p?.nombre ?? "",
+              cantidad: num(l.cantidad),
+              precio: num(l.precio),
+              subtotal: num(l.precio) * num(l.cantidad),
+              condiciones: l.condiciones.trim() || undefined,
+              observaciones: l.observaciones.trim() || undefined,
+            };
+          })
+      : [];
     const nota: NotaCampo = {
       id: newId(),
       fechaContacto: new Date(`${fecha}T10:00:00`).toISOString(),
@@ -183,6 +203,7 @@ export function CargarActividad({
       cultivo: cultivo === "General" ? undefined : cultivo,
       actividad,
       notaVisita: buildDetalle(),
+      documento: docLineas.length ? { tipo: docTipoDe(actividad), lineas: docLineas, total } : undefined,
       creadoPor: user?.nombre,
       updatedAt: Date.now(),
     };
@@ -211,7 +232,7 @@ export function CargarActividad({
   const enviar = (canal: "email" | "wp") => {
     let asunto: string;
     let texto: string;
-    if (actividad === "presupuesto") {
+    if (USA_PLANTILLA.includes(actividad)) {
       const items = lineas
         .filter((l) => l.productoId)
         .map((l) => {
@@ -219,7 +240,7 @@ export function CargarActividad({
           return `- ${l.cantidad}x ${p?.nombre ?? ""}: ${formatUsd(num(l.precio) * num(l.cantidad))}`;
         })
         .join("\n");
-      asunto = `Presupuesto — ${productor?.razonSocial ?? ""}`;
+      asunto = `${ESTADO_PROCESO_LABEL[actividad]} — ${productor?.razonSocial ?? ""}`;
       texto = `${asunto}\n\n${items}\n\nTotal: ${formatUsd(total)}`;
     } else {
       asunto = `Asesoría — ${productor?.razonSocial ?? ""}`;
@@ -473,10 +494,12 @@ export function CargarActividad({
         </div>
       )}
 
-      {actividad === "presupuesto" && (
+      {USA_PLANTILLA.includes(actividad) && (
         <div className="card space-y-3">
           <div className="flex items-center justify-between">
-            <p className="font-display text-[14px] font-semibold text-ink">Presupuesto</p>
+            <p className="font-display text-[14px] font-semibold text-ink">
+              {ESTADO_PROCESO_LABEL[actividad]}
+            </p>
             <button
               type="button"
               onClick={() =>
@@ -603,7 +626,7 @@ export function CargarActividad({
         </div>
       )}
 
-      {MUEVE_PLATA.includes(actividad) && actividad !== "presupuesto" && (
+      {MUEVE_PLATA.includes(actividad) && !USA_PLANTILLA.includes(actividad) && (
         <label className="block max-w-xs space-y-1.5">
           <span className="label">Monto (U$S)</span>
           <input

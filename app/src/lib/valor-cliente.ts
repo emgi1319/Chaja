@@ -63,3 +63,16 @@ const usd = new Intl.NumberFormat("es-AR", {
 export function formatUsd(n: number): string {
   return usd.format(n || 0);
 }
+
+// Variante con dos decimales para el cálculo de Valor Cliente / costo por hectárea,
+// donde el cliente necesita el detalle sin redondear.
+const usd2 = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export function formatUsd2(n: number): string {
+  return usd2.format(n || 0);
+}
