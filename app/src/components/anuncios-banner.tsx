@@ -73,18 +73,13 @@ function Contenido({ a }: { a: Anuncio }) {
   );
 }
 
-// Revalidación única por carga de app: evita un fetch por cada cambio de sección.
-let revalidado = false;
-
 export function AnunciosBanner() {
   const user = useApp((s) => s.user);
   const [items, setItems] = useState<Anuncio[]>(anunciosCacheados);
 
   useEffect(() => {
-    // Ya se dibujó desde el cache; revalidamos contra el servidor una sola vez
-    // por sesión para no pegarle en cada cambio de sección (el main se remonta).
-    if (revalidado) return;
-    revalidado = true;
+    // Se dibuja al instante desde el cache y se revalida contra el servidor. Depende
+    // del usuario para refrescar al cambiar de cuenta (activar/desactivar campañas).
     let alive = true;
     void listarAnuncios().then((all) => {
       if (alive) setItems(all);
@@ -92,7 +87,7 @@ export function AnunciosBanner() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [user?.id]);
 
   if (!user) return null;
   const visibles = items.filter((a) => anuncioVisible(a, user));

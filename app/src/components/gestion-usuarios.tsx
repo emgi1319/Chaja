@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Trash2, Shield, Users, Download, Wand2, Power, ArrowLeft, UploadCloud } from "lucide-react";
+import { Trash2, Shield, Users, Download, Wand2, Power, ArrowLeft, UploadCloud, Pencil, X } from "lucide-react";
 import {
   listarUsuarios,
   crearUsuario,
+  editarUsuario,
   eliminarUsuario,
   cambiarEstadoUsuario,
   type CuentaUsuario,
@@ -52,46 +53,81 @@ export function GestionUsuarios() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vista, setVista] = useState<"lista" | "masiva">("lista");
+  const [editId, setEditId] = useState<string | null>(null);
 
   const recargar = () => {
     void listarUsuarios().then(setUsuarios);
   };
 
-  const lideres = usuarios.filter((u) => u.rol === "gerente");
+  const lideres = usuarios.filter((u) => u.rol === "gerente" && u.id !== editId);
   const puedeTenerLider = rol === "vendedor" || rol === "supervisor";
   const nombreLider = (id?: string | null) => usuarios.find((u) => u.id === id)?.nombre;
   useEffect(() => {
     recargar();
   }, []);
 
+  const limpiar = () => {
+    setEditId(null);
+    setNombre("");
+    setUsuario("");
+    setPassword("");
+    setRol("vendedor");
+    setGrupo("");
+    setLiderId(SIN_LIDER);
+  };
+
+  const editar = (u: CuentaUsuario) => {
+    setEditId(u.id);
+    setNombre(u.nombre);
+    setUsuario(u.usuario);
+    setPassword("");
+    setRol(u.rol);
+    setGrupo(u.grupo ?? "");
+    setLiderId(u.lider_id ?? SIN_LIDER);
+    setCreada(null);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const crear = async () => {
     setError(null);
-    if (!nombre.trim() || !usuario.trim() || !password.trim()) {
+    if (!nombre.trim() || !usuario.trim() || (!editId && !password.trim())) {
       setError("Completá nombre, usuario y contraseña.");
       return;
     }
     setSaving(true);
     try {
-      setCreada({ usuario: usuario.trim(), password });
-      await crearUsuario({
-        nombre: nombre.trim(),
-        usuario: usuario.trim(),
-        password,
-        rol,
-        grupo: grupo.trim() || undefined,
-        // Solo vendedores y supervisores responden a un líder de equipo.
-        liderId: puedeTenerLider ? liderId || undefined : undefined,
-      });
-      setNombre("");
-      setUsuario("");
-      setPassword("");
-      setRol("vendedor");
-      setGrupo("");
-      setLiderId(SIN_LIDER);
+      if (editId) {
+        await editarUsuario(editId, {
+          nombre: nombre.trim(),
+          usuario: usuario.trim(),
+          rol,
+          grupo: grupo.trim() || undefined,
+          liderId: puedeTenerLider ? liderId || undefined : undefined,
+          password: password.trim() || undefined,
+        });
+        limpiar();
+      } else {
+        setCreada({ usuario: usuario.trim(), password });
+        await crearUsuario({
+          nombre: nombre.trim(),
+          usuario: usuario.trim(),
+          password,
+          rol,
+          grupo: grupo.trim() || undefined,
+          // Solo vendedores y supervisores responden a un líder de equipo.
+          liderId: puedeTenerLider ? liderId || undefined : undefined,
+        });
+        limpiar();
+      }
       recargar();
     } catch {
       setCreada(null);
-      setError("No se pudo crear la cuenta. ¿El usuario ya existe?");
+      setError(
+        editId
+          ? "No se pudo guardar. ¿El usuario ya existe?"
+          : "No se pudo crear la cuenta. ¿El usuario ya existe?",
+      );
     } finally {
       setSaving(false);
     }
@@ -132,13 +168,25 @@ export function GestionUsuarios() {
       </div>
 
       <div className="card space-y-3">
-        <p className="font-display text-[14px] font-semibold text-ink">Nueva cuenta</p>
+        <div className="flex items-center justify-between">
+          <p className="font-display text-[14px] font-semibold text-ink">
+            {editId ? "Editar cuenta" : "Nueva cuenta"}
+          </p>
+          {editId && (
+            <button
+              onClick={limpiar}
+              className="flex items-center gap-1 text-[12px] font-medium text-ink-muted hover:text-ink"
+            >
+              <X size={14} /> Cancelar edición
+            </button>
+          )}
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Nombre" value={nombre} onChange={setNombre} />
           <Field label="Usuario (para ingresar)" value={usuario} onChange={setUsuario} />
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="label">Contraseña</span>
+              <span className="label">{editId ? "Contraseña nueva (opcional)" : "Contraseña"}</span>
               <button
                 type="button"
                 onClick={() => setPassword(generarPassword())}
@@ -147,7 +195,12 @@ export function GestionUsuarios() {
                 <Wand2 size={13} /> Generar
               </button>
             </div>
-            <input value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={editId ? "Dejar vacío para no cambiarla" : ""}
+              className="field"
+            />
           </div>
           <Dropdown label="Rol" value={rol} options={ROLES} onChange={setRol} />
           <Field
@@ -186,7 +239,7 @@ export function GestionUsuarios() {
         )}
         <div className="sm:max-w-xs">
           <PrimaryButton disabled={saving} onClick={crear}>
-            {saving ? "Creando…" : "Crear cuenta"}
+            {saving ? "Guardando…" : editId ? "Guardar cambios" : "Crear cuenta"}
           </PrimaryButton>
         </div>
       </div>
@@ -237,6 +290,14 @@ export function GestionUsuarios() {
                   <td className="px-4 py-3">
                     {u.id !== yo?.id && (
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => editar(u)}
+                          title="Editar cuenta"
+                          aria-label="Editar cuenta"
+                          className="p-1.5 text-ink-muted transition-colors hover:text-primary"
+                        >
+                          <Pencil size={16} />
+                        </button>
                         <button
                           onClick={() => void alternarEstado(u)}
                           title={esActivo(u) ? "Desactivar cuenta" : "Activar cuenta"}

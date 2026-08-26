@@ -127,11 +127,11 @@ export function GestionCampanias() {
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const recargar = () => {
-    void listarAnuncios().then(setLista);
+  const recargar = async () => {
+    setLista(await listarAnuncios());
   };
   useEffect(() => {
-    recargar();
+    void recargar();
     void listarUsuarios().then(setUsuarios);
   }, []);
 
@@ -210,20 +210,35 @@ export function GestionCampanias() {
       createdAt:
         editId != null ? (lista.find((x) => x.id === editId)?.createdAt ?? Date.now()) : Date.now(),
     };
-    await guardarAnuncio(anuncio);
-    recargar();
-    setSaving(false);
-    setVista("lista");
+    try {
+      await guardarAnuncio(anuncio);
+      await recargar();
+      setVista("lista");
+    } catch {
+      setError("No se pudo guardar la campaña. Reintentá en unos segundos.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const alternarActivo = async (a: Anuncio) => {
-    await guardarAnuncio({ ...a, activo: !a.activo });
-    recargar();
+    setError(null);
+    try {
+      await guardarAnuncio({ ...a, activo: !a.activo });
+      await recargar();
+    } catch {
+      setError("No se pudo cambiar el estado de la campaña.");
+    }
   };
 
   const borrar = async (a: Anuncio) => {
-    await eliminarAnuncio(a.id);
-    recargar();
+    setError(null);
+    try {
+      await eliminarAnuncio(a.id);
+      await recargar();
+    } catch {
+      setError("No se pudo eliminar la campaña.");
+    }
   };
 
   if (vista === "lista") {
@@ -237,6 +252,9 @@ export function GestionCampanias() {
             <Plus size={17} /> Nueva campaña
           </button>
         </div>
+        {error && (
+          <p className="rounded-2xl bg-danger/10 px-4 py-2.5 text-[13px] font-medium text-danger">{error}</p>
+        )}
 
         <div className="card p-0">
           <p className="border-b border-line px-4 py-3 font-display text-[14px] font-semibold text-ink">

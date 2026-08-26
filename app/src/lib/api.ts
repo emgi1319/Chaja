@@ -321,6 +321,14 @@ export async function crearUsuario(data: {
   });
 }
 
+export async function editarUsuario(
+  id: string,
+  data: { nombre: string; usuario: string; rol: string; grupo?: string; liderId?: string; password?: string },
+): Promise<void> {
+  if (!API_BASE) return;
+  await request(`/usuarios/${id}/editar`, { method: "POST", body: JSON.stringify(data) });
+}
+
 export async function eliminarUsuario(id: string): Promise<void> {
   if (!API_BASE) return;
   await request(`/usuarios/${id}`, { method: "DELETE" });

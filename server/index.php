@@ -119,10 +119,10 @@ if ($name === 'password' && $method === 'POST') {
     $nueva = (string) ($b['nueva'] ?? '');
     // strlen y no mb_strlen: mbstring no esta disponible en el contenedor PHP.
     if (strlen($nueva) < 4) {
-        fail('la contrasena nueva debe tener al menos 4 caracteres');
+        fail('la contraseña nueva debe tener al menos 4 caracteres');
     }
     if (!password_verify($actual, $user['password_hash'])) {
-        fail('la contrasena actual no coincide', 403);
+        fail('la contraseña actual no coincide', 403);
     }
     $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
         ->execute([password_hash($nueva, PASSWORD_DEFAULT), $user['id']]);
@@ -216,6 +216,38 @@ if ($name === 'usuarios') {
             $pdo->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$target]);
         }
         out(['ok' => true, 'activo' => $activo]);
+    }
+    // Editar cuenta: datos y rol; la contrasena solo cambia si viene una nueva.
+    if ($method === 'POST' && ($parts[2] ?? '') === 'editar') {
+        $target = (string) ($parts[1] ?? '');
+        if ($target === '') {
+            fail('falta id');
+        }
+        $b = body();
+        $usuario = trim((string) ($b['usuario'] ?? ''));
+        $nombre = trim((string) ($b['nombre'] ?? ''));
+        $rol = (string) ($b['rol'] ?? 'vendedor');
+        $grupo = trim((string) ($b['grupo'] ?? '')) ?: null;
+        $liderId = trim((string) ($b['liderId'] ?? '')) ?: null;
+        $pass = (string) ($b['password'] ?? '');
+        if ($usuario === '' || $nombre === '') {
+            fail('faltan datos');
+        }
+        if (!in_array($rol, ['vendedor', 'supervisor', 'gerente', 'superadmin'], true)) {
+            fail('rol invalido');
+        }
+        $dup = $pdo->prepare('SELECT id FROM users WHERE usuario = ? AND id <> ?');
+        $dup->execute([$usuario, $target]);
+        if ($dup->fetch()) {
+            fail('el usuario ya existe', 409);
+        }
+        $pdo->prepare('UPDATE users SET nombre = ?, usuario = ?, rol = ?, grupo = ?, lider_id = ? WHERE id = ?')
+            ->execute([$nombre, $usuario, $rol, $grupo, $liderId, $target]);
+        if ($pass !== '') {
+            $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+                ->execute([password_hash($pass, PASSWORD_DEFAULT), $target]);
+        }
+        out(['ok' => true]);
     }
     if ($method === 'POST') {
         $b = body();
