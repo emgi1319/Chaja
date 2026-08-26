@@ -93,11 +93,12 @@ if (!$user) {
 $esGestion = in_array($user['rol'], ['supervisor', 'gerente', 'superadmin'], true);
 
 // Owners cuyos registros puede ver el usuario. null = sin restricción (ve todo).
-// El líder de equipo (rol gerente) ve lo suyo y lo de los usuarios que tiene asignados.
+// Líder de equipo y supervisor ven lo suyo y lo de los usuarios que tienen asignados;
+// el vendedor solo lo suyo; el super admin no consulta datos operativos.
 $ownersVisibles = null;
 if ($user['rol'] === 'vendedor') {
     $ownersVisibles = [$user['id']];
-} elseif ($user['rol'] === 'gerente') {
+} elseif (in_array($user['rol'], ['gerente', 'supervisor'], true)) {
     $q = $pdo->prepare('SELECT id FROM users WHERE lider_id = ?');
     $q->execute([$user['id']]);
     $ownersVisibles = array_column($q->fetchAll(), 'id');
@@ -183,8 +184,8 @@ if ($name === 'usuarios') {
         if (!$esGestion) {
             fail('sin permiso', 403);
         }
-        // El líder solo ve las cuentas de su equipo; gerencia y super admin, todas.
-        if ($user['rol'] === 'gerente') {
+        // Líder y supervisor solo ven las cuentas de su equipo; el super admin, todas.
+        if (in_array($user['rol'], ['gerente', 'supervisor'], true)) {
             $q = $pdo->prepare(
                 'SELECT id, nombre, usuario, rol, grupo, lider_id FROM users WHERE lider_id = ? OR id = ? ORDER BY nombre',
             );

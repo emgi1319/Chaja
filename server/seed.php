@@ -36,12 +36,13 @@ function upsertUser(
     )->execute([$id, $nombre, $usuario, password_hash($pass, PASSWORD_DEFAULT), $rol, $grupo, $liderId]);
 }
 
-// Pablo Herrera lidera al equipo: sin usuarios asignados el perfil de líder no sirve.
+// Jerarquía: Pablo (líder) tiene a Diego, Martín y a la supervisora Sandra;
+// Sandra a su vez lidera a Lucía. Así se ve el equipo propio del supervisor.
 upsertUser($pdo, 'usr-admin', 'Pablo Herrera', 'admin', 'admin', 'gerente', 'Agro Norte');
 upsertUser($pdo, 'usr-diego', 'Diego Romero', 'diego', 'diego', 'vendedor', 'Agro Norte', 'usr-admin');
 upsertUser($pdo, 'usr-martin', 'Martín Suárez', 'martin', 'martin', 'vendedor', 'Agro Norte', 'usr-admin');
-upsertUser($pdo, 'usr-lucia', 'Lucía Fernández', 'lucia', 'lucia', 'vendedor', 'Agro Norte', 'usr-admin');
 upsertUser($pdo, 'usr-sandra', 'Sandra Méndez', 'sandra', 'sandra', 'supervisor', 'Agro Norte', 'usr-admin');
+upsertUser($pdo, 'usr-lucia', 'Lucía Fernández', 'lucia', 'lucia', 'vendedor', 'Agro Norte', 'usr-sandra');
 upsertUser($pdo, 'usr-superadmin', 'Super Admin', 'superadmin', 'superadmin', 'superadmin');
 
 // Cada cartera pertenece a SU vendedor: el scope por owner de la API se apoya en

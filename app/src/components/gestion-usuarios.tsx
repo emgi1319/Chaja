@@ -59,7 +59,10 @@ export function GestionUsuarios() {
     void listarUsuarios().then(setUsuarios);
   };
 
-  const lideres = usuarios.filter((u) => u.rol === "gerente" && u.id !== editId);
+  // Un vendedor responde a un líder o a un supervisor; un supervisor, a un líder.
+  const opcionesJefe = usuarios.filter(
+    (u) => u.id !== editId && (u.rol === "gerente" || (rol === "vendedor" && u.rol === "supervisor")),
+  );
   const puedeTenerLider = rol === "vendedor" || rol === "supervisor";
   const nombreLider = (id?: string | null) => usuarios.find((u) => u.id === id)?.nombre;
   useEffect(() => {
@@ -211,19 +214,19 @@ export function GestionUsuarios() {
           />
           {puedeTenerLider && (
             <Dropdown
-              label="Líder de equipo"
+              label={rol === "supervisor" ? "Líder de equipo" : "Líder o supervisor a cargo"}
               value={liderId}
               options={[
-                { value: SIN_LIDER, label: "Sin líder asignado" },
-                ...lideres.map((l) => ({ value: l.id, label: l.nombre })),
+                { value: SIN_LIDER, label: "Sin asignar" },
+                ...opcionesJefe.map((l) => ({ value: l.id, label: `${l.nombre} (${rolLabel(l.rol)})` })),
               ]}
               onChange={setLiderId}
             />
           )}
         </div>
         <p className="text-[12px] text-ink-muted">
-          El grupo es una etiqueta para segmentar campañas. El líder de equipo ve y puede corregir
-          el trabajo de los usuarios que tenga asignados.
+          El grupo es una etiqueta para segmentar campañas. El líder de equipo y el supervisor ven y
+          pueden corregir el trabajo de los usuarios que tengan asignados.
         </p>
         {error && <p className="text-[12px] font-medium text-danger">{error}</p>}
         {creada && (

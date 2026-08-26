@@ -2858,7 +2858,7 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            {user.rol === "gerente" && <SelectorSombra />}
+            {(user.rol === "gerente" || user.rol === "supervisor") && <SelectorSombra />}
             {pend > 0 && (
               <span className="hidden rounded-pill bg-primary-tint px-3 py-1 text-[12px] font-medium text-primary-dark sm:inline">
                 {pend} sin sincronizar
