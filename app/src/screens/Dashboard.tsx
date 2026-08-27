@@ -47,6 +47,8 @@ import {
   Eye,
   KeyRound,
   FileText,
+  Warehouse,
+  Check,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "../store";
@@ -101,6 +103,7 @@ import {
   type Referido,
   type Anuncio,
   type DocTipo,
+  type Producto,
   rolLabel,
 } from "../types";
 import {
@@ -159,6 +162,7 @@ type Section =
   | "usuarios"
   | "campanias"
   | "documentos"
+  | "stock"
   | "plataforma";
 
 const NAV: { key: Section; label: string; icon: typeof Users }[] = [
@@ -172,6 +176,7 @@ const NAV: { key: Section; label: string; icon: typeof Users }[] = [
   { key: "documentos", label: "Documentos", icon: FileText },
   { key: "equipo", label: "Equipo", icon: UserCheck },
   { key: "productos", label: "Productos", icon: Package },
+  { key: "stock", label: "Stock", icon: Warehouse },
   { key: "valorcliente", label: "Valor cliente", icon: Calculator },
   { key: "parametros", label: "Parámetros", icon: Sliders },
   { key: "reportes", label: "Reportes", icon: BarChart3 },
@@ -194,6 +199,7 @@ const RAIL_VEND: Section[] = [
   "operaciones",
   "referidos",
   "productos",
+  "stock",
 ];
 const RAIL_SUP: Section[] = [
   "inicio",
@@ -209,6 +215,7 @@ const RAIL_SUP: Section[] = [
   "facturacion",
   "equipo",
   "productos",
+  "stock",
 ];
 // El super admin es el dueño de la plataforma: solo ve el estado del sistema,
 // las cuentas y las campañas. Nada operativo (clientes, valor cliente, parámetros, etc.).
@@ -233,6 +240,7 @@ const SECTION_TITLE: Record<Section, string> = {
   usuarios: "Gestión de cuentas",
   campanias: "Campañas y comunicados",
   documentos: "Presupuestos, remitos y facturas",
+  stock: "Stock de productos",
 };
 
 // Consigna que encabeza cada sección, para orientar al usuario sobre qué hace.
@@ -255,6 +263,7 @@ const SECTION_DESC: Record<Section, string> = {
   usuarios: "Alta, baja y roles de las cuentas del sistema.",
   campanias: "Publicá banners y comunicados para los usuarios del sistema.",
   documentos: "Todos los presupuestos, remitos y facturas cargados, en un solo lugar.",
+  stock: "Cargá ingresos o corregí el stock de cada producto, de forma individual.",
 };
 
 // Banner destacado de cada sección (copia del modo "Descripciones" del demo).
@@ -330,6 +339,10 @@ const SECTION_BANNER: Record<Section, { h: string; p: string }> = {
   documentos: {
     h: "Tus documentos comerciales, ordenados",
     p: "Presupuestos, remitos y facturas separados por tipo, con cliente, fecha y total. Todo lo que cargaste desde la agenda, listo para consultar.",
+  },
+  stock: {
+    h: "El stock siempre al día, sin rehacer nada",
+    p: "Sumá el ingreso de mercadería a lo que ya tenés, o corregí la existencia exacta de cada producto por separado. Cada cambio se guarda solo.",
   },
 };
 
@@ -1571,6 +1584,142 @@ function Equipo() {
       >
         {detalle && <PanelVendedor nombre={detalle} />}
       </Drawer>
+    </div>
+  );
+}
+
+function StockRow({ p, onDone }: { p: Producto; onDone: () => Promise<void> }) {
+  const [ingreso, setIngreso] = useState("");
+  const [fijar, setFijar] = useState("");
+  const [busy, setBusy] = useState(false);
+  const stock = p.stock ?? 0;
+  const inputCls =
+    "w-20 rounded-lg border border-line bg-white px-2 py-2 text-right text-[13px] outline-none focus:border-primary/40";
+
+  const sumar = async () => {
+    const c = numv(ingreso);
+    if (!c) return;
+    setBusy(true);
+    await saveProducto({ ...p, stock: Math.max(0, stock + c) });
+    await onDone();
+    setIngreso("");
+    setBusy(false);
+  };
+  const setear = async () => {
+    if (fijar.trim() === "") return;
+    setBusy(true);
+    await saveProducto({ ...p, stock: Math.max(0, numv(fijar)) });
+    await onDone();
+    setFijar("");
+    setBusy(false);
+  };
+
+  return (
+    <tr className="border-t border-line transition-colors hover:bg-surface">
+      <td className="px-4 py-3">
+        <p className="font-medium text-ink">{p.nombre}</p>
+        <p className="text-[11px] text-ink-muted">{p.codigo || p.empresa || "—"}</p>
+      </td>
+      <td className="px-4 py-3 text-right">
+        {p.categoria ? (
+          <span className="rounded-pill bg-primary/10 px-2 py-0.5 text-[12px] font-medium text-primary-dark">
+            {p.categoria}
+          </span>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <span className={`font-display text-[16px] font-semibold ${stock <= 0 ? "text-danger" : "text-ink"}`}>
+          {stock}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1.5">
+          <input
+            value={ingreso}
+            onChange={(e) => setIngreso(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void sumar()}
+            inputMode="numeric"
+            placeholder="0"
+            className={inputCls}
+          />
+          <button
+            onClick={() => void sumar()}
+            disabled={busy || !numv(ingreso)}
+            className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:bg-disabled"
+          >
+            <Plus size={14} /> Sumar
+          </button>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1.5">
+          <input
+            value={fijar}
+            onChange={(e) => setFijar(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void setear()}
+            inputMode="numeric"
+            placeholder={String(stock)}
+            className={inputCls}
+          />
+          <button
+            onClick={() => void setear()}
+            disabled={busy || fijar.trim() === ""}
+            className="flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-[12px] font-semibold text-ink transition-colors hover:bg-surface disabled:opacity-50"
+          >
+            <Check size={14} /> Fijar
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function StockScreen() {
+  const catalogo = useApp((s) => s.catalogo);
+  const refresh = useApp((s) => s.refresh);
+  const [q, setQ] = useState("");
+  const filtrados = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    if (!t) return catalogo;
+    return catalogo.filter((p) =>
+      [p.nombre, p.codigo, p.categoria, p.empresa].some((x) => (x ?? "").toLowerCase().includes(t)),
+    );
+  }, [catalogo, q]);
+  const unidades = catalogo.reduce((a, p) => a + (p.stock ?? 0), 0);
+  const sinStock = catalogo.filter((p) => (p.stock ?? 0) <= 0).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <Kpi icon={Package} label="Productos" value={String(catalogo.length)} />
+        <Kpi icon={Boxes} label="Unidades en stock" value={String(unidades)} tone="accent" />
+        <Kpi icon={AlertTriangle} label="Sin stock" value={String(sinStock)} tone={sinStock ? "amber" : "ink"} />
+      </div>
+      <div className="card flex items-center gap-2 p-3">
+        <Search size={18} className="shrink-0 text-ink-muted" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar producto por nombre, código o categoría…"
+          className="w-full bg-transparent text-[14px] text-ink outline-none"
+        />
+      </div>
+      <TableShell head={["Producto", "Categoría", "Stock", "Cargar ingreso", "Corregir"]}>
+        {filtrados.length === 0 && (
+          <tr>
+            <td colSpan={5} className="px-4 py-6 text-[13px] text-ink-muted">
+              {catalogo.length === 0
+                ? "Todavía no hay productos cargados."
+                : "No hay productos que coincidan con la búsqueda."}
+            </td>
+          </tr>
+        )}
+        {filtrados.map((p) => (
+          <StockRow key={p.id} p={p} onDone={refresh} />
+        ))}
+      </TableShell>
     </div>
   );
 }
@@ -2992,6 +3141,7 @@ export function Dashboard() {
           {section === "usuarios" && <GestionUsuarios />}
           {section === "campanias" && <GestionCampanias />}
           {section === "documentos" && <DocumentosScreen />}
+          {section === "stock" && <StockScreen />}
           {section === "plataforma" && <PanelPlataforma onIr={setSection} />}
           </div>
         </main>
