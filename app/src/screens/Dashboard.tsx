@@ -1594,7 +1594,7 @@ function StockRow({ p, onDone }: { p: Producto; onDone: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const stock = p.stock ?? 0;
   const inputCls =
-    "w-20 rounded-lg border border-line bg-white px-2 py-2 text-right text-[13px] outline-none focus:border-primary/40";
+    "w-20 rounded-lg border border-line bg-white px-2 py-2 text-right text-[13px] outline-none ring-2 ring-transparent transition-all focus:border-primary/40 focus:ring-primary/15";
 
   const sumar = async () => {
     const c = numv(ingreso);
@@ -1660,8 +1660,8 @@ function StockRow({ p, onDone }: { p: Producto; onDone: () => Promise<void> }) {
             onChange={(e) => setFijar(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void setear()}
             inputMode="numeric"
-            placeholder={String(stock)}
-            className={inputCls}
+            placeholder="Nuevo total"
+            className={`${inputCls} w-24`}
           />
           <button
             onClick={() => void setear()}
