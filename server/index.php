@@ -131,13 +131,17 @@ if ($name === 'password' && $method === 'POST') {
 }
 
 if ($name === 'catalog' && $method === 'GET') {
-    // Cada cuenta tiene su propio catálogo: se filtra por owner igual que la cartera.
-    if ($ownersVisibles !== null) {
-        $marcas = implode(',', array_fill(0, count($ownersVisibles), '?'));
-        $stmt = $pdo->prepare("SELECT data FROM productos WHERE owner IN ({$marcas}) ORDER BY nombre");
-        $stmt->execute($ownersVisibles);
-    } else {
+    // El catálogo es por empresa: cada cuenta ve los productos de su propio grupo.
+    // El super admin ve todos; una cuenta sin grupo todavía no tiene catálogo.
+    if ($canSeeAll) {
         $stmt = $pdo->query('SELECT data FROM productos ORDER BY nombre');
+    } else {
+        $grupo = (string) ($user['grupo'] ?? '');
+        if ($grupo === '') {
+            out(['productos' => []]);
+        }
+        $stmt = $pdo->prepare('SELECT data FROM productos WHERE grupo = ? ORDER BY nombre');
+        $stmt->execute([$grupo]);
     }
     out(['productos' => array_map(fn ($r) => json_decode($r['data'], true), $stmt->fetchAll())]);
 }
@@ -363,7 +367,7 @@ $collections = [
     'notas-campo' => ['table' => 'actividades', 'owned' => true, 'cols' => ['productor_id' => 'productorId', 'actividad' => 'actividad']],
     'operaciones' => ['table' => 'operaciones', 'owned' => true, 'cols' => ['productor_id' => 'productorId', 'cultivo' => 'cultivo', 'producto' => 'producto', 'etapa' => 'etapa', 'estado' => 'estado', 'valor_potencial' => 'valorPotencial']],
     'referidos' => ['table' => 'referidos', 'owned' => true, 'cols' => ['nombre' => 'nombre', 'proceso' => 'proceso']],
-    'productos' => ['table' => 'productos', 'owned' => true, 'cols' => ['codigo' => 'codigo', 'categoria' => 'categoria', 'nombre' => 'nombre']],
+    'productos' => ['table' => 'productos', 'owned' => false, 'cols' => ['codigo' => 'codigo', 'categoria' => 'categoria', 'nombre' => 'nombre']],
 ];
 
 if (!isset($collections[$name])) {
@@ -421,6 +425,10 @@ if ($method === 'POST') {
     $values = ['id' => $item['id']];
     if ($col['owned']) {
         $values['owner'] = $dueno;
+    }
+    // El catálogo se guarda con el grupo de la cuenta que lo carga (scope por empresa).
+    if ($name === 'productos') {
+        $values['grupo'] = $user['grupo'] ?? null;
     }
     $values['data'] = json_encode($item, JSON_UNESCAPED_UNICODE);
     $values['updated_at'] = (int) ($item['updatedAt'] ?? round(microtime(true) * 1000));

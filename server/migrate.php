@@ -40,12 +40,14 @@ $columnasNuevas = ($driver ?? 'mysql') === 'sqlite'
         'ALTER TABLE users ADD COLUMN lider_id TEXT',
         'ALTER TABLE users ADD COLUMN activo INTEGER NOT NULL DEFAULT 1',
         'ALTER TABLE productos ADD COLUMN owner TEXT',
+        'ALTER TABLE productos ADD COLUMN grupo TEXT',
     ]
     : [
         'ALTER TABLE users ADD COLUMN grupo VARCHAR(120)',
         'ALTER TABLE users ADD COLUMN lider_id VARCHAR(40)',
         'ALTER TABLE users ADD COLUMN activo TINYINT NOT NULL DEFAULT 1',
         'ALTER TABLE productos ADD COLUMN owner VARCHAR(40)',
+        'ALTER TABLE productos ADD COLUMN grupo VARCHAR(120)',
     ];
 foreach ($columnasNuevas as $sql) {
     try {
@@ -53,6 +55,17 @@ foreach ($columnasNuevas as $sql) {
     } catch (PDOException $e) {
         // la columna ya existe
     }
+}
+
+// El catálogo paso a ser por empresa (grupo). Los productos ya cargados antes de
+// este cambio quedaron sin grupo: se asignan una sola vez (WHERE grupo vacio, idempotente).
+// Los de ejemplo (de la cuenta de Diego) van al grupo demo; el resto los cargo la
+// cuenta de Innoquim mientras probaba el sistema.
+try {
+    $pdo->exec("UPDATE productos SET grupo = 'Agro Norte' WHERE owner = 'usr-diego' AND (grupo IS NULL OR grupo = '')");
+    $pdo->exec("UPDATE productos SET grupo = 'Innoquim' WHERE (owner IS NULL OR owner = '') AND (grupo IS NULL OR grupo = '')");
+} catch (PDOException $e) {
+    // sin productos previos o ya migrados
 }
 
 $exists = $pdo->prepare('SELECT id FROM users WHERE usuario = ?');

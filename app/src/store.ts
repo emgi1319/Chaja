@@ -48,9 +48,10 @@ export const useApp = create<AppState>((set, get) => ({
   logout: () => {
     clearUser();
     setSombraApi(null);
-    // El cache de campañas es por usuario: se limpia para que la próxima cuenta no
-    // vea las de la anterior (incluidas las que se acaban de desactivar).
+    // Caches por usuario: se limpian para que la próxima cuenta no vea datos de la
+    // anterior (campañas, y el catálogo de productos que ahora es por empresa).
     localStorage.removeItem("chaja.anuncios");
+    localStorage.removeItem("chaja.catalogo");
     set({ user: null, sombra: null });
   },
 

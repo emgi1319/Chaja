@@ -71,6 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_referidos_owner ON referidos(owner);
 CREATE TABLE IF NOT EXISTS productos (
   id TEXT PRIMARY KEY,
   owner TEXT,
+  grupo TEXT,
   codigo TEXT,
   categoria TEXT,
   nombre TEXT NOT NULL,
@@ -78,7 +79,7 @@ CREATE TABLE IF NOT EXISTS productos (
   updated_at INTEGER NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_productos_owner ON productos(owner);
+CREATE INDEX IF NOT EXISTS idx_productos_grupo ON productos(grupo);
 
 CREATE TABLE IF NOT EXISTS parametros (
   clave TEXT PRIMARY KEY,
