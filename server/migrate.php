@@ -39,11 +39,13 @@ $columnasNuevas = ($driver ?? 'mysql') === 'sqlite'
         'ALTER TABLE users ADD COLUMN grupo TEXT',
         'ALTER TABLE users ADD COLUMN lider_id TEXT',
         'ALTER TABLE users ADD COLUMN activo INTEGER NOT NULL DEFAULT 1',
+        'ALTER TABLE productos ADD COLUMN owner TEXT',
     ]
     : [
         'ALTER TABLE users ADD COLUMN grupo VARCHAR(120)',
         'ALTER TABLE users ADD COLUMN lider_id VARCHAR(40)',
         'ALTER TABLE users ADD COLUMN activo TINYINT NOT NULL DEFAULT 1',
+        'ALTER TABLE productos ADD COLUMN owner VARCHAR(40)',
     ];
 foreach ($columnasNuevas as $sql) {
     try {

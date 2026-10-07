@@ -131,8 +131,15 @@ if ($name === 'password' && $method === 'POST') {
 }
 
 if ($name === 'catalog' && $method === 'GET') {
-    $rows = $pdo->query('SELECT data FROM productos ORDER BY nombre')->fetchAll();
-    out(['productos' => array_map(fn ($r) => json_decode($r['data'], true), $rows)]);
+    // Cada cuenta tiene su propio catálogo: se filtra por owner igual que la cartera.
+    if ($ownersVisibles !== null) {
+        $marcas = implode(',', array_fill(0, count($ownersVisibles), '?'));
+        $stmt = $pdo->prepare("SELECT data FROM productos WHERE owner IN ({$marcas}) ORDER BY nombre");
+        $stmt->execute($ownersVisibles);
+    } else {
+        $stmt = $pdo->query('SELECT data FROM productos ORDER BY nombre');
+    }
+    out(['productos' => array_map(fn ($r) => json_decode($r['data'], true), $stmt->fetchAll())]);
 }
 
 if ($name === 'parametros') {
@@ -356,7 +363,7 @@ $collections = [
     'notas-campo' => ['table' => 'actividades', 'owned' => true, 'cols' => ['productor_id' => 'productorId', 'actividad' => 'actividad']],
     'operaciones' => ['table' => 'operaciones', 'owned' => true, 'cols' => ['productor_id' => 'productorId', 'cultivo' => 'cultivo', 'producto' => 'producto', 'etapa' => 'etapa', 'estado' => 'estado', 'valor_potencial' => 'valorPotencial']],
     'referidos' => ['table' => 'referidos', 'owned' => true, 'cols' => ['nombre' => 'nombre', 'proceso' => 'proceso']],
-    'productos' => ['table' => 'productos', 'owned' => false, 'cols' => ['codigo' => 'codigo', 'categoria' => 'categoria', 'nombre' => 'nombre']],
+    'productos' => ['table' => 'productos', 'owned' => true, 'cols' => ['codigo' => 'codigo', 'categoria' => 'categoria', 'nombre' => 'nombre']],
 ];
 
 if (!isset($collections[$name])) {

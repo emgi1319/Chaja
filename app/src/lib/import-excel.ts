@@ -166,6 +166,10 @@ export async function importarClientesExcel(file: File): Promise<number> {
     const ha = numOf(pick("hectá", "hecta", " ha"));
     const cultivo = str(pick("cultivo")) ?? "Maíz";
     const facturado = numOf(pick("facturado")) ?? 0;
+    // Persona de contacto real del establecimiento (nombre y apellido).
+    const contactoNombre = str(pick("contacto", "responsable", "referente", "persona"));
+    const email = str(pick("email", "correo", "mail"));
+    const telefono = str(pick("teléfono", "telefono", "celular", "tel"));
 
     const prod: Productor = {
       id: newId(),
@@ -173,10 +177,10 @@ export async function importarClientesExcel(file: File): Promise<number> {
       vendedor: str(pick("vendedor", "asignado")),
       localidad: str(pick("localidad", "ciudad")),
       cuitRut: str(pick("cuit", "fiscal", "rut")),
-      email: str(pick("email", "correo", "mail")),
-      telefono: str(pick("teléfono", "telefono", "celular", "tel")),
+      email,
+      telefono,
       creditoAcordado: numOf(pick("crédito", "credito")),
-      contactos: [],
+      contactos: contactoNombre ? [{ nombre: contactoNombre, email, telefono }] : [],
       unidades: [
         {
           id: newId(),

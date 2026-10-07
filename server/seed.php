@@ -62,17 +62,18 @@ $productos = [
     ['INO-SOJ', 'Inoculante', 'Inoculante para soja', 'Rizobacter', 'Bradyrhizobium', 'Dosis 50 ha', 180, 172, 165, 100],
 ];
 $stmtProd = $pdo->prepare(
-    'REPLACE INTO productos (id, codigo, categoria, nombre, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+    'REPLACE INTO productos (id, owner, codigo, categoria, nombre, data, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
 );
 foreach ($productos as $i => $p) {
-    // El catálogo es de la empresa, no de un vendedor: se sirve a todos por igual.
+    // Cada cuenta tiene su propio catálogo (scope por owner, como la cartera).
+    // Los de ejemplo quedan en la cuenta de Diego; Pablo, su líder, también los ve.
     $id = 'prod-' . ($i + 1);
     $data = [
         'id' => $id, 'codigo' => $p[0], 'categoria' => $p[1], 'nombre' => $p[2], 'empresa' => $p[3],
         'principioActivo' => $p[4], 'presentacion' => $p[5],
         'precio1' => $p[6], 'precio2' => $p[7], 'precio3' => $p[8], 'stock' => $p[9],
     ];
-    $stmtProd->execute([$id, $p[0], $p[1], $p[2], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
+    $stmtProd->execute([$id, 'usr-diego', $p[0], $p[1], $p[2], json_encode($data, JSON_UNESCAPED_UNICODE), $now]);
 }
 
 // Canasta de insumos por cultivo: dosis/ha, precio unitario y captura del ciclo

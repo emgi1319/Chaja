@@ -68,11 +68,13 @@ CREATE TABLE IF NOT EXISTS referidos (
 
 CREATE TABLE IF NOT EXISTS productos (
   id VARCHAR(40) PRIMARY KEY,
+  owner VARCHAR(40),
   codigo VARCHAR(60),
   categoria VARCHAR(60),
   nombre VARCHAR(200) NOT NULL,
   data JSON NOT NULL,
-  updated_at BIGINT NOT NULL
+  updated_at BIGINT NOT NULL,
+  INDEX (owner)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS parametros (
