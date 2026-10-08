@@ -1259,6 +1259,7 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
           </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px] sm:grid-cols-3">
+          <DatoFicha label="Persona de contacto" valor={productor.contactos?.[0]?.nombre} />
           <DatoFicha label="Número fiscal (CUIT)" valor={productor.cuitRut} />
           <DatoFicha label="Email" valor={productor.email} />
           <DatoFicha label="Teléfono" valor={productor.telefono} />
