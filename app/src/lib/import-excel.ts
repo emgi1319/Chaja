@@ -1,4 +1,4 @@
-import type { Producto, Productor, Rol } from "../types";
+import type { Producto, Productor, Rol, Contacto, Cultivo } from "../types";
 import { saveProducto, productores, crearUsuario } from "./api";
 import { newId } from "./db";
 
@@ -160,16 +160,48 @@ export async function importarClientesExcel(file: File): Promise<number> {
       return isNaN(x) ? undefined : x;
     };
 
-    const razonSocial = str(pick("establecimiento", "razón", "razon", "cliente", "nombre"));
+    // Busca una columna por su número (1, 2, 3). El nº 1 acepta la columna sin número
+    // ("Contacto", "Email") y rechaza las que dicen 2 o 3; el nº 2/3 exige ese dígito.
+    const pickN = (variante: number, ...needles: string[]): unknown => {
+      const k = keys.find((key) => {
+        const kl = key.toLowerCase();
+        if (!needles.some((nd) => kl.includes(nd))) return false;
+        if (variante === 1) return !kl.includes("2") && !kl.includes("3");
+        return kl.includes(String(variante));
+      });
+      return k ? r[k] : undefined;
+    };
+
+    const razonSocial = str(pick("establecimiento", "razón", "razon", "cliente"));
     if (!razonSocial) continue;
 
-    const ha = numOf(pick("hectá", "hecta", " ha"));
-    const cultivo = str(pick("cultivo")) ?? "Maíz";
+    // Hasta dos personas de contacto, cada una con su email y teléfono.
+    const contactos: Contacto[] = [];
+    for (const i of [1, 2]) {
+      const nombre = str(pickN(i, "contacto", "responsable", "referente", "persona", "asesor"));
+      const mail = str(pickN(i, "email", "correo", "mail"));
+      const tel = str(pickN(i, "teléfono", "telefono", "celular", "tel"));
+      const cargo = str(pickN(i, "cargo", "puesto", "rol"));
+      if (nombre || (i === 1 && (mail || tel))) {
+        contactos.push({ nombre: nombre ?? razonSocial, email: mail, telefono: tel, rolContacto: cargo });
+      }
+    }
+
+    // Hasta tres cultivos en una sola fila.
+    const cultivos: Cultivo[] = [];
     const facturado = numOf(pick("facturado")) ?? 0;
-    // Persona de contacto real del establecimiento (nombre y apellido).
-    const contactoNombre = str(pick("contacto", "responsable", "referente", "persona"));
-    const email = str(pick("email", "correo", "mail"));
-    const telefono = str(pick("teléfono", "telefono", "celular", "tel"));
+    for (const i of [1, 2, 3]) {
+      const cultivo = str(pickN(i, "cultivo"));
+      const ha = numOf(pickN(i, "hectá", "hecta", " ha", "has"));
+      if (cultivo || ha) {
+        cultivos.push({
+          id: newId(),
+          cultivo: cultivo ?? "Maíz",
+          superficieHa: ha ?? 0,
+          facturado: i === 1 ? facturado : 0,
+        });
+      }
+    }
 
     const prod: Productor = {
       id: newId(),
@@ -177,16 +209,11 @@ export async function importarClientesExcel(file: File): Promise<number> {
       vendedor: str(pick("vendedor", "asignado")),
       localidad: str(pick("localidad", "ciudad")),
       cuitRut: str(pick("cuit", "fiscal", "rut")),
-      email,
-      telefono,
+      email: contactos[0]?.email,
+      telefono: contactos[0]?.telefono,
       creditoAcordado: numOf(pick("crédito", "credito")),
-      contactos: contactoNombre ? [{ nombre: contactoNombre, email, telefono }] : [],
-      unidades: [
-        {
-          id: newId(),
-          cultivos: ha ? [{ id: newId(), cultivo, superficieHa: ha, facturado }] : [],
-        },
-      ],
+      contactos,
+      unidades: [{ id: newId(), cultivos }],
       updatedAt: Date.now(),
     };
     await productores.save(prod);
