@@ -5,6 +5,9 @@ import type { Contacto } from "../types";
 
 export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () => void }) {
   const p = productores.get(id);
+  const c0 = p?.contactos?.[0];
+  const [razonSocial, setRazonSocial] = useState(p?.razonSocial ?? "");
+  const [contactoNombre, setContactoNombre] = useState(c0?.nombre ?? "");
   const [email, setEmail] = useState(p?.email ?? "");
   const [telefono, setTelefono] = useState(p?.telefono ?? "");
   const [cuit, setCuit] = useState(p?.cuitRut ?? "");
@@ -17,8 +20,14 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
     if (!p) return;
     setSaving(true);
     const credNum = parseFloat(credito.replace(",", "."));
+    const nombrePersona = contactoNombre.trim();
+    const contactos = nombrePersona
+      ? [{ ...(c0 ?? {}), nombre: nombrePersona }, ...(p.contactos?.slice(1) ?? [])]
+      : p.contactos;
     await productores.save({
       ...p,
+      razonSocial: razonSocial.trim() || p.razonSocial,
+      contactos,
       email: email.trim() || undefined,
       telefono: telefono.trim() || undefined,
       cuitRut: cuit.trim() || undefined,
@@ -33,6 +42,8 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
 
   return (
     <div className="space-y-3">
+      <Field label="Establecimiento / Razón social" value={razonSocial} onChange={setRazonSocial} />
+      <Field label="Persona de contacto (nombre y apellido)" value={contactoNombre} onChange={setContactoNombre} />
       <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
       <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
       <Field label="Número fiscal (CUIT)" value={cuit} onChange={setCuit} inputMode="numeric" />

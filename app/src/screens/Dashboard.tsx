@@ -1082,7 +1082,15 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
   const [editOpen, setEditOpen] = useState(false);
   const [bcraOpen, setBcraOpen] = useState(false);
   const [ventaOpen, setVentaOpen] = useState(false);
+  const [bajaConfirm, setBajaConfirm] = useState(false);
   const [, bump] = useState(0);
+  const refresh = useApp((s) => s.refresh);
+
+  const darDeBaja = async () => {
+    await productores.remove(id);
+    await refresh();
+    onBack();
+  };
 
   if (!productor || !row) return null;
 
@@ -1220,6 +1228,24 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
             >
               Editar
             </button>
+            {bajaConfirm ? (
+              <span className="flex items-center gap-2 text-[13px]">
+                <span className="text-ink-soft">¿Dar de baja?</span>
+                <button onClick={() => void darDeBaja()} className="font-semibold text-danger hover:underline">
+                  Sí, eliminar
+                </button>
+                <button onClick={() => setBajaConfirm(false)} className="font-semibold text-ink-muted hover:underline">
+                  No
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setBajaConfirm(true)}
+                className="text-[13px] font-semibold text-danger hover:underline"
+              >
+                Dar de baja
+              </button>
+            )}
           </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px] sm:grid-cols-3">
