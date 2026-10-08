@@ -1074,6 +1074,16 @@ function DatoFicha({ label, valor }: { label: string; valor?: string }) {
   );
 }
 
+// Las semillas se miden en bolsas: para esos insumos se muestra, además del U$S,
+// el equivalente en bolsas (dosis/ha por hectáreas). Se detecta por la unidad.
+function esSemilla(ins: InsumoLinea): boolean {
+  return (ins.unidad ?? "").toLowerCase().includes("bolsa");
+}
+function fmtBolsas(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return `${r % 1 === 0 ? r : r.toFixed(1)} bolsas`;
+}
+
 function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
   const productor = productores.get(id);
   const row = productoresRows().find((r) => r.productor.id === id);
@@ -1302,6 +1312,12 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
               const fact = facturadoCultivo(c);
               const op = oportunidadCultivo(c);
               const cap = pot > 0 ? (fact / pot) * 100 : 0;
+              const bolsasOp = (c.insumos ?? [])
+                .filter(esSemilla)
+                .reduce((a, ins) => {
+                  const o = inversionInsumo(ins, c.superficieHa) - (ins.facturacionAnterior || 0);
+                  return a + (ins.usdXUnidad > 0 ? o / ins.usdXUnidad : 0);
+                }, 0);
               return (
                 <div key={c.id} className="card">
                   <div className="flex items-center justify-between">
@@ -1313,7 +1329,12 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
                   <p className="mt-1.5 text-[12px] text-ink-soft">
                     Pot. {formatUsd(pot)} · Fact. {formatUsd(fact)}
                   </p>
-                  <p className="text-[12px] text-ink-soft">Oportunidad {formatUsd(op)}</p>
+                  <p className="text-[12px] text-ink-soft">
+                    Oportunidad {formatUsd(op)}
+                    {bolsasOp > 0 && (
+                      <span className="font-medium text-accent-dark"> · {fmtBolsas(bolsasOp)}</span>
+                    )}
+                  </p>
                   <div className="mt-2">
                     <Bar pct={cap} tone="accent" />
                   </div>
@@ -1348,6 +1369,7 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
                     {(c.insumos ?? []).map((ins, idx) => {
                       const pot = inversionInsumo(ins, c.superficieHa);
                       const op = pot - (ins.facturacionAnterior || 0);
+                      const bolsas = esSemilla(ins) && ins.usdXUnidad > 0;
                       return (
                         <tr key={idx} className="border-t border-line">
                           <td className="px-4 py-3">
@@ -1356,11 +1378,21 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
                               {ins.unidadXHa} {ins.unidad ?? "u"}/ha × {formatUsd(ins.usdXUnidad)}
                             </p>
                           </td>
-                          <td className="px-4 py-3 text-right text-ink-soft">{formatUsd(pot)}</td>
+                          <td className="px-4 py-3 text-right text-ink-soft">
+                            {formatUsd(pot)}
+                            {bolsas && (
+                              <span className="block text-[11px] text-accent-dark">{fmtBolsas(pot / ins.usdXUnidad)}</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-right text-ink-soft">
                             {formatUsd(ins.facturacionAnterior || 0)}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-amber">{formatUsd(op)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-amber">
+                            {formatUsd(op)}
+                            {bolsas && (
+                              <span className="block text-[11px] font-medium text-accent-dark">{fmtBolsas(op / ins.usdXUnidad)}</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
