@@ -802,6 +802,7 @@ function Kpi({
   icon: Icon,
   label,
   value,
+  sub,
   tone = "ink",
   onClick,
   tip,
@@ -809,6 +810,7 @@ function Kpi({
   icon: typeof Users;
   label: string;
   value: string;
+  sub?: string;
   tone?: "ink" | "accent" | "amber";
   onClick?: () => void;
   tip?: string;
@@ -835,6 +837,7 @@ function Kpi({
         >
           {value}
         </p>
+        {sub && <p className="text-[12px] font-medium text-accent-dark">{sub}</p>}
       </div>
     </>
   );
@@ -876,6 +879,25 @@ function TableShell({ head, children }: { head: string[]; children: ReactNode })
 
 function Inicio() {
   const t = campaignTotals();
+  // Totales en bolsas de la cartera (solo semillas). Si el cliente no carga semillas
+  // en bolsas, queda en cero y no se muestra, para no complicar a quien trabaja en U$S.
+  const bolsas = productores.list().reduce(
+    (acc, p) => {
+      for (const u of p.unidades) {
+        for (const c of u.cultivos) {
+          for (const ins of c.insumos ?? []) {
+            if (!esSemilla(ins) || !(ins.usdXUnidad > 0)) continue;
+            const pot = inversionInsumo(ins, c.superficieHa);
+            const fact = ins.facturacionAnterior || 0;
+            acc.facturado += fact / ins.usdXUnidad;
+            acc.oportunidad += Math.max(0, pot - fact) / ins.usdXUnidad;
+          }
+        }
+      }
+      return acc;
+    },
+    { facturado: 0, oportunidad: 0 },
+  );
   const objetivo = getObjetivoCampania() || t.potencial;
   const avance = objetivo > 0 ? t.facturado / objetivo : 0;
   const alertas = alertasPanel();
@@ -910,12 +932,14 @@ function Inicio() {
           icon={DollarSign}
           label="Facturado campaña"
           value={formatUsd(t.facturado)}
+          sub={bolsas.facturado > 0 ? fmtBolsas(bolsas.facturado) : undefined}
           onClick={() => setPanel({ tipo: "facturado" })}
         />
         <Kpi
           icon={TrendingUp}
           label="Oportunidad detectada"
           value={formatUsd(t.oportunidad)}
+          sub={bolsas.oportunidad > 0 ? fmtBolsas(bolsas.oportunidad) : undefined}
           tone="amber"
           onClick={() => setPanel({ tipo: "oportunidad" })}
           tip="Potencial no capturado: el valor cliente total (fórmula agronómica) menos lo facturado."

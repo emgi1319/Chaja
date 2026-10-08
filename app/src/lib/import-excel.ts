@@ -119,6 +119,7 @@ export async function importarProductosExcel(file: File): Promise<number> {
       empresa: str(pick("marca", "empresa", "proveedor", "laborator")),
       principioActivo: str(pick("principio", "activo")),
       presentacion: str(pick("present", "envase")),
+      unidad: str(pick("unidad")),
       precio1: numOf(pick("precio 1", "precio1", "precio")),
       precio2: numOf(pick("precio 2", "precio2")),
       precio3: numOf(pick("precio 3", "precio3")),

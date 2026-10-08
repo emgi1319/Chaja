@@ -60,6 +60,7 @@ export interface Producto {
   empresa?: string;
   principioActivo?: string;
   presentacion?: string;
+  unidad?: string;
   precio1?: number;
   precio2?: number;
   precio3?: number;
