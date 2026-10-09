@@ -173,7 +173,11 @@ export async function importarClientesExcel(file: File): Promise<number> {
       return k ? r[k] : undefined;
     };
 
-    const razonSocial = str(pick("establecimiento", "razón", "razon", "cliente"));
+    // Nombre de la empresa/cliente. Se prioriza el establecimiento; si no está, se
+    // aceptan otras variantes de encabezado para no dejar el nombre vacío.
+    const razonSocial =
+      str(pick("establecimiento", "razón social", "razon social", "razón", "razon", "finca", "productor")) ??
+      str(pick("empresa", "cliente", "nombre"));
     if (!razonSocial) continue;
 
     // Hasta dos personas de contacto, cada una con su email y teléfono.
