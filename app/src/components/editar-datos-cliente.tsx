@@ -13,6 +13,8 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
   const [cuit, setCuit] = useState(p?.cuitRut ?? "");
   const [credito, setCredito] = useState(p?.creditoAcordado != null ? String(p.creditoAcordado) : "");
   const [scoring, setScoring] = useState(p?.scoringCrediticio ?? "");
+  const [direccion, setDireccion] = useState(p?.direccion ?? "");
+  const [cp, setCp] = useState(p?.cp ?? "");
   const [localidad, setLocalidad] = useState(p?.localidad ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -33,6 +35,8 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
       cuitRut: cuit.trim() || undefined,
       creditoAcordado: isNaN(credNum) ? undefined : credNum,
       scoringCrediticio: scoring.trim() || undefined,
+      direccion: direccion.trim() || undefined,
+      cp: cp.trim() || undefined,
       localidad: localidad.trim() || undefined,
       updatedAt: Date.now(),
     });
@@ -49,6 +53,8 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
       <Field label="Número fiscal (CUIT)" value={cuit} onChange={setCuit} inputMode="numeric" />
       <Field label="Crédito otorgado (U$S)" value={credito} onChange={setCredito} inputMode="decimal" />
       <Field label="Scoring crediticio" value={scoring} onChange={setScoring} />
+      <Field label="Dirección" value={direccion} onChange={setDireccion} />
+      <Field label="Código postal" value={cp} onChange={setCp} inputMode="numeric" />
       <Field label="Localidad" value={localidad} onChange={setLocalidad} />
       <div className="sticky bottom-0 -mx-5 -mb-4 border-t border-line bg-white px-5 py-3">
         <PrimaryButton disabled={saving} onClick={guardar}>

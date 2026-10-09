@@ -213,6 +213,8 @@ export async function importarClientesExcel(file: File): Promise<number> {
       razonSocial,
       vendedor: str(pick("vendedor", "asignado")),
       localidad: str(pick("localidad", "ciudad")),
+      direccion: str(pick("direcc", "domicilio")),
+      cp: str(pick("postal", "código postal", "codigo postal", "c.p")) ?? str(pick("cp")),
       cuitRut: str(pick("cuit", "fiscal", "rut")),
       email: contactos[0]?.email,
       telefono: contactos[0]?.telefono,

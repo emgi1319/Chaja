@@ -1295,6 +1295,8 @@ function ClienteDetalle({ id, onBack }: { id: string; onBack: () => void }) {
             valor={productor.creditoAcordado != null ? formatUsd(productor.creditoAcordado) : undefined}
           />
           <DatoFicha label="Scoring crediticio" valor={productor.scoringCrediticio} />
+          <DatoFicha label="Dirección" valor={productor.direccion} />
+          <DatoFicha label="Código postal" valor={productor.cp} />
           <DatoFicha label="Localidad" valor={productor.localidad} />
         </dl>
       </div>
@@ -1504,8 +1506,20 @@ function Clientes() {
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const [version, setVersion] = useState(0);
   const [importing, setImporting] = useState(false);
+  const [vaciarConfirm, setVaciarConfirm] = useState(false);
+  const [vaciando, setVaciando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const refresh = useApp((s) => s.refresh);
   const all = useMemo(() => productoresRows(), [version]);
+
+  const vaciar = async () => {
+    setVaciando(true);
+    for (const r of all) await productores.remove(r.productor.id);
+    await refresh();
+    setVersion((v) => v + 1);
+    setVaciando(false);
+    setVaciarConfirm(false);
+  };
 
   const onImport = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1579,6 +1593,29 @@ function Clientes() {
             <Download size={16} className="rotate-180" />
             {importing ? "Importando…" : "Importar"}
           </button>
+          {all.length > 0 &&
+            (vaciarConfirm ? (
+              <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-danger/40 bg-danger/5 px-3 py-2 text-[13px]">
+                <span className="text-ink-soft">¿Borrar los {all.length} clientes?</span>
+                <button
+                  onClick={() => void vaciar()}
+                  disabled={vaciando}
+                  className="font-semibold text-danger hover:underline disabled:opacity-60"
+                >
+                  {vaciando ? "Borrando…" : "Sí, vaciar"}
+                </button>
+                <button onClick={() => setVaciarConfirm(false)} className="font-semibold text-ink-muted hover:underline">
+                  No
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setVaciarConfirm(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-white px-4 py-2.5 text-[14px] font-semibold text-danger transition-colors hover:bg-danger/5"
+              >
+                <Trash2 size={16} /> Vaciar lista
+              </button>
+            ))}
           <button
             onClick={() => setNuevoOpen(true)}
             className="press flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-card transition-colors hover:bg-primary-dark"
