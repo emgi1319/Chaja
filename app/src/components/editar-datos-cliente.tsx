@@ -1,11 +1,22 @@
-import { useState } from "react";
-import { DateField, Field, PrimaryButton } from "./ui";
-import { productores } from "../lib/api";
+import { useEffect, useState } from "react";
+import { DateField, Dropdown, Field, PrimaryButton } from "./ui";
+import { productores, listarUsuarios, type CuentaUsuario } from "../lib/api";
+import { useApp } from "../store";
 import type { Contacto } from "../types";
 
 export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () => void }) {
   const p = productores.get(id);
   const c0 = p?.contactos?.[0];
+  const user = useApp((s) => s.user);
+  // Solo gerencia/supervisión puede reasignar la cartera a otro vendedor; el backend
+  // mueve el dueño del cliente al vendedor elegido para que lo vea.
+  const esVendedor = user?.rol === "vendedor";
+  const [vendedor, setVendedor] = useState(p?.vendedor ?? "");
+  const [vendedores, setVendedores] = useState<CuentaUsuario[]>([]);
+  useEffect(() => {
+    if (esVendedor) return;
+    void listarUsuarios().then((us) => setVendedores(us.filter((u) => u.rol === "vendedor")));
+  }, [esVendedor]);
   const [razonSocial, setRazonSocial] = useState(p?.razonSocial ?? "");
   const [contactoNombre, setContactoNombre] = useState(c0?.nombre ?? "");
   const [email, setEmail] = useState(p?.email ?? "");
@@ -29,6 +40,7 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
     await productores.save({
       ...p,
       razonSocial: razonSocial.trim() || p.razonSocial,
+      vendedor: vendedor.trim() || undefined,
       contactos,
       email: email.trim() || undefined,
       telefono: telefono.trim() || undefined,
@@ -47,6 +59,22 @@ export function EditarDatosCliente({ id, onSaved }: { id: string; onSaved: () =>
   return (
     <div className="space-y-3">
       <Field label="Establecimiento / Razón social" value={razonSocial} onChange={setRazonSocial} />
+      {esVendedor ? (
+        <div className="block space-y-1.5">
+          <span className="label">Vendedor asignado</span>
+          <p className="rounded-2xl border border-line bg-surface px-4 py-3.5 text-[15px] text-ink">
+            {p?.vendedor || "—"}
+          </p>
+        </div>
+      ) : (
+        <Dropdown
+          label="Vendedor asignado"
+          value={vendedor}
+          options={vendedores.map((v) => ({ value: v.nombre, label: v.nombre }))}
+          onChange={setVendedor}
+          placeholder="Elegir vendedor"
+        />
+      )}
       <Field label="Persona de contacto (nombre y apellido)" value={contactoNombre} onChange={setContactoNombre} />
       <Field label="Email" value={email} onChange={setEmail} inputMode="email" />
       <Field label="Teléfono" value={telefono} onChange={setTelefono} inputMode="tel" />
